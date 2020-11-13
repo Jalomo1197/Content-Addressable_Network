@@ -1,5 +1,6 @@
 package Chord
 
+import akka.actor.AbstractActor.Receive
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
@@ -20,7 +21,7 @@ object Node {
 }
 
 class Node(context: ActorContext[Node.Command], groupId: String, deviceId: Int, m: Int, node_count: Int)
-  extends AbstractBehavior[Node.Command](context) {
+  extends AbstractBehavior[Node.Command](context){
   import Node._
 
   var lastKeyValueReading: Option[Double] = None        // No Key Value Pair initially
@@ -38,7 +39,6 @@ class Node(context: ActorContext[Node.Command], groupId: String, deviceId: Int, 
     fingerTable(k) = (deviceId + math.pow(2, k).toInt) % node_count   // TODO:
   }
   // Set Predecessor and successor Nodes
-
   override def onMessage(msg: Command): Behavior[Command] = {
     msg match {
       // Write

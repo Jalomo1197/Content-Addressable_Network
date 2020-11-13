@@ -22,6 +22,7 @@ case class GuardianNode(node_count: Int, query_count: Int) extends Actor{
   }
 
   override def receive: Receive = {
+    case "start" =>
     case foundKey() => {
 
     }
