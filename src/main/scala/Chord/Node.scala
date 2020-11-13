@@ -12,7 +12,7 @@ object Node {
   def apply(groupId: String, deviceId: Int, m: Int, node_count: Int): Behavior[Command] =
     Behaviors.setup(context => new Node(context, groupId, deviceId, m, node_count))
 
-  sealed trait Command
+  trait Command
   // Immutable Data
   final case class ReadKeyValuePairs(requestId: Long, replyTo: ActorRef[RespondKeyValuePairs]) extends Command
   final case class RespondKeyValuePairs(requestId: Long, value: Option[Double])
