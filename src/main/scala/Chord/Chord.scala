@@ -1,6 +1,6 @@
 package Chord
 
-import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors, LoggerOps}
+import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 
 // TODO: Must make two acknowledgments commands. Add to Singleton and catch cases with logging
@@ -33,9 +33,8 @@ class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord
             context.log.info("Guardian Node: " + nodeGroupID + " DNE")
             context.log.info("Ignoring Request: creation of Node = " + nodeID)
             Behaviors.unhandled
-          case guardianOP@Some(g) =>
+          case Some(guardian) =>
             // context.log.info("") Cannot confirm here. Must confirm in acknowledgment command see TODO
-            val guardian = guardianOP.get
             guardian ! registerNode(nodeID, nodeGroupID)
         }
 

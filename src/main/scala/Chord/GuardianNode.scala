@@ -2,8 +2,7 @@ package Chord
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
-import akka.actor.typed._
-import scala.Predef.ArrowAssoc
+
 
 
 
@@ -38,9 +37,8 @@ class GuardianNode(context: ActorContext[GuardianNode.Command], nodeGroupId: Str
         nodeList.get(node) match {
           case None =>
             Behaviors.unhandled
-          case nodeToAdd @ Some(nodeActor) =>
-            val toForwardNode = nodeToAdd.get
-            toForwardNode ! forward_lookup(key, node, user)
+          case Some(nodeActor) =>
+            nodeActor ! forward_lookup(key, node, user)
         }
         this
 
