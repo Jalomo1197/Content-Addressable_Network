@@ -1,11 +1,11 @@
 package IoT_Temperture_example
 
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
-import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext}
+import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 
 object DeviceManager{
- // def apply(): Behavior[Command] =
- //   Behaviors.setup(context => new DeviceManager(context))
+  def apply(): Behavior[Command] =
+    Behaviors.setup(context => new DeviceManager(context))
 
   sealed trait Command
   //#device-registration-msgs
