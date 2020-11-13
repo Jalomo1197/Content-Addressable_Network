@@ -15,6 +15,7 @@ case class GuardianNode(node_count: Int, query_count: Int) extends Actor{
   for( i <- 0 until node_count) {
   {
     nodeList(i) = context.actorOf(Props[Node],"node: " + i)
+
   }
   // Generate HashCode Here
     var key = Hash.getHash("node: " + i.toString)

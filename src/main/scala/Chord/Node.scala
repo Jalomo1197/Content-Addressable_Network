@@ -31,8 +31,11 @@ class Node(context: ActorContext[Node.Command], groupId: String, deviceId: Int, 
   var fingerTable = new Array[Int](max)
   context.log.info2("Node actor {}-{} started", groupId, deviceId)
   // Set up of finger table
-  for( i <- 0 until max - 1) {
-    fingerTable(i) = (deviceId + math.pow(2, i).toInt) % node_count
+  for( k <- 0 until max - 1) {
+    val start = (deviceId + math.pow(2,k)).toInt % max
+    val end = (start + math.pow(2,k + 1).toInt) % max
+    val interval = withinInterval(start, end, m)
+    fingerTable(k) = (deviceId + math.pow(2, k).toInt) % node_count   // TODO:
   }
   // Set Predecessor and successor Nodes
 
