@@ -21,11 +21,12 @@ object Chord{
 class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord.Command](context) {
   // For immediate access to case classes
   import Chord._
+  // Map for guardian nodes
   private var guardians = Map.empty[String, ActorRef[GuardianNode.Command]]
 
   override def onMessage(msg: Chord.Command): Behavior[Chord.Command] = {
     msg match {
-
+      // Registering node if guardian node exist
       case registerNode(nodeID, nodeGroupID) =>
         guardians.get(nodeGroupID) match {
           case None =>
@@ -38,7 +39,7 @@ class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord
             guardian ! registerNode(nodeID, nodeGroupID)
         }
 
-
+      // Registering guardian node
       case registerGuardianNode(nodeGroupID) =>
         guardians.get(nodeGroupID) match {
           case None =>
@@ -48,6 +49,8 @@ class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord
             context.log.info("Guardian Already Exist : " + guardianOP)
             Behaviors.unhandled
         }
+      // registerNode acknowledgement command catch here
+      // registerGuardianNode acknowledgement command catch here
     }
     this
   }
