@@ -3,61 +3,75 @@ package Chord
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 
-// TODO: Must make two acknowledgments commands. Add to Singleton and catch cases with logging
 
 object Chord{
   // Apply function called by Chord(...)
-  def apply(): Behavior[Command] =
-    Behaviors.setup(context => new Chord(context))
+  def apply(nodeAmount: Int): Behavior[Command] =
+    Behaviors.setup(context => new Chord(context, nodeAmount))
   // trait Command to generalize the onMessage function
   trait Command
-  // this Command can be processes by both Chord actor & Guardian Node actors. Passed down if possible
-  case class registerNode(nodeID: Int, nodeGroupID: String) extends Command with GuardianNode.Command
-  // this Command creates a new Guardian Node
-  case class registerGuardianNode(nodeGroupID: String) extends Command
-  // see TODO
+  // command user -> insert (K,V)
+  case class insertMapEntry(key :String, value: String) extends Command with Node.Command
+  /*
+     Chord.scala:
+     this Command in this level forwards the lookup to the node that kick starts algorithm (finger table usage)
+     Node.scala:
+     this Command in Node.scala file, hashes the key to use finger table
+  */
+  case class keyLookup(key: String, user: ActorRef[User.Command]) extends Command with Node.Command
+  /*
+     this command is sent by a Node Actor and submitted to all other Node Actors
+  */
+  case class updateFingerTable(newNodeID: String, node: ActorRef[Node.Command]) extends Command with Node.Command
+
 }
 
-class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord.Command](context) {
+class Chord(context: ActorContext[Chord.Command], nodeAmount: Int) extends AbstractBehavior[Chord.Command](context) {
   // For immediate access to case classes
   import Chord._
-  // Map for guardian nodes
-  private var guardians = Map.empty[String, ActorRef[GuardianNode.Command]]
+
+  // Map for node Actors, access by NodeID
+  private var nodes = Map.empty[String, ActorRef[Node.Command]]
+  var IP_identification = "8.8.8.8"
+  var kickStartNode:  String = ""
+  var key = "google.com"
+  for (n <- 0 until nodeAmount ){
+    // key must be randomize too?
+    // IP_identification must randomize
+
+    // In Node.scala constructor: updateFingerTable is sent back to Chord
+    val node = context.spawn(Node(IP_identification, key), s"node-$IP_identification")
+    // new node now included in map
+
+    nodes += IP_identification -> node
+    // must set kick start node
+    if (kickStartNode.equals("")) kickStartNode = IP_identification
+    context.log.info("Node: " + IP_identification + " add to Chord")
+  }
+
 
   override def onMessage(msg: Chord.Command): Behavior[Chord.Command] = {
     msg match {
-      // Registering node if guardian node exist
-      case registerNode(nodeID, nodeGroupID) =>
-        guardians.get(nodeGroupID) match {
-          case None =>
-            context.log.info("Guardian Node: " + nodeGroupID + " DNE")
-            context.log.info("Ignoring Request: creation of Node = " + nodeID)
-            Behaviors.unhandled
-          case Some(guardian) =>
-            // context.log.info("") Cannot confirm here. Must confirm in acknowledgment command see TODO
-            guardian ! registerNode(nodeID, nodeGroupID)
-        }
+      case updateFingerTable(newNodeID, node) =>
+        // Sending update to all nodes
+        nodes.foreach( nodeEntry => {
+          context.log.info("updateFingerTable sent to Node: " + nodeEntry._1)
+          nodeEntry._2 ! updateFingerTable(newNodeID, node)
+        })
+      case keyLookup(key, user) =>
+        // pass to random node to kick start algorithm
+        nodes(kickStartNode) ! keyLookup(key, user)
 
-      // Registering guardian node
-      case registerGuardianNode(nodeGroupID) =>
-        guardians.get(nodeGroupID) match {
-          case None =>
-            val guardian = context.spawn(GuardianNode(nodeGroupID), "Guardian Node: " + nodeGroupID + "created")
-            guardians += nodeGroupID -> guardian
-          case guardianOP@Some(g) =>
-            context.log.info("Guardian Already Exist : " + guardianOP)
-            Behaviors.unhandled
-        }
-      // registerNode acknowledgement command catch here
-      // registerGuardianNode acknowledgement command catch here
+      case insertMapEntry(key, value) =>
+        // determine which node will store based on range
+        // send to node  insertMapEntry(key, value)
     }
     this
   }
 
 
-
   /* Signal handling */
-  override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
+  override def onSignal: PartialFunction[Signal, Behavior[Chord.Command]] = {
     case PostStop =>
       context.log.info("Chord actor stopped")
       this
