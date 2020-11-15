@@ -36,7 +36,7 @@ class Node(context: ActorContext[Node.Command], groupID: String, deviceId: Strin
   extends AbstractBehavior[Node.Command](context){
   import Node._
 
-  val k: BigInt = BigInt                                           // encrypt k here
+  var k: BigInt = 0                                           // encrypt k here
   var gotIt = false
   var nodes: Iterable[ActorRef[Node.Command]] = Iterable.empty[ActorRef[Node.Command]]
   var lastKeyValueReading: Option[Double] = None                // No Key Value Pair initially
@@ -46,12 +46,8 @@ class Node(context: ActorContext[Node.Command], groupID: String, deviceId: Strin
   var n: BigInt = Hash.encrypt(deviceId)
   var fingerTable: Array[FingerEntry] = new Array[FingerEntry](m)
   // Set up of finger table
-  for( k <- 0 until max - 1) {
-    val start = (deviceId + math.pow(2,k)).toInt % max
-    val end = (start + math.pow(2,k + 1).toInt) % max
-    val interval = Interval(start, end)
-    fingerTable(k) = new FingerEntry(start, interval, this)
-  }
+  initFingerTable()
+
   // Can just call initFingerTable but need to declare it scala wise
   // Join
   // Set Predecessor and successor Nodes
