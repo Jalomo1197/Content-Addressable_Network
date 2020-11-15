@@ -3,10 +3,10 @@ package Chord
 // [a,b)
 // Left side is inclusive && Right is exclusive
 object Interval{
-  def apply(start: Int, end: Int): Interval = new Interval(start, end)
+  def apply(start: BigInt, end: BigInt): Interval = new Interval(start, end)
 }
-class Interval(start: Int, end: Int) {
-  def valid(nodeID: Int): Boolean = {
+class Interval(start: BigInt, end: BigInt) {
+  def valid(nodeID: BigInt): Boolean = {
     if(start == end && nodeID == start){     // Single Node
       true
     }
@@ -19,6 +19,6 @@ class Interval(start: Int, end: Int) {
     else
       false
   }
-  def get_end: Int =
+  def get_end: BigInt =
     end
 }
