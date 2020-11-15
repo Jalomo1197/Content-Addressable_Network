@@ -7,17 +7,21 @@ import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.scaladsl.LoggerOps
 
+import scala.math.BigDecimal.int2bigDecimal
+import scala.math.BigInt.int2bigInt
+
 object Node {
-  def apply(groupId: String, deviceId: Int, m: Int, node_count: Int): Behavior[Command] =
-    Behaviors.setup(context => new Node(context, groupId, deviceId, m, node_count))
+  def apply(groupId: String, deviceId: String, m: Int): Behavior[Command] = {
+    Behaviors.setup(context => new Node(context, groupId, deviceId: String, m))
+  }
 
   trait Command
   // Immutable Data
-  case class FindPredecessor(key: Int, replyTo: ActorRef[ResultRecorded]) extends Command
-  final case class ResultRecorded(key: Int, node: Option[Node])
+  case class FindPredecessor(key: String, replyTo: ActorRef[ResultRecorded]) extends Command
+  final case class ResultRecorded(key: String, node: Option[Node])
 
-  case class FindSuccessor(key: Int, replyTo: ActorRef[ResultRecorded]) extends Command
-  final case class FindSuccessorRecorded(key: Int, node: Option[Node])
+  case class FindSuccessor(key: String, replyTo: ActorRef[ResultRecorded]) extends Command
+  final case class FindSuccessorRecorded(key: String, node: Option[Node])
 
   final case class ReadKeyValuePairs(requestId: Long, replyTo: ActorRef[RespondKeyValuePairs]) extends Command
   final case class RespondKeyValuePairs(requestId: Long, value: Option[Double])
@@ -25,32 +29,36 @@ object Node {
   final case class RecordKeyValuePairs(requestId: Long, value: Double, replyTo: ActorRef[KeyValuePairsRecorded]) extends Command
   final case class KeyValuePairsRecorded(requestId: Long)
 
-  case class receiveList(actors: List[ActorRef[Node.Command]]) extends Command
+  case class receiveList(actors: Map[String, ActorRef[Node.Command]]) extends Command
 }
 
-class Node(context: ActorContext[Node.Command], groupId: String, deviceId: Int, m: Int, node_count: Int)
+class Node(context: ActorContext[Node.Command], groupID: String, deviceId: String, m: Int)
   extends AbstractBehavior[Node.Command](context){
   import Node._
 
-  var lastKeyValueReading: Option[Double] = None        // No Key Value Pair initially
-  var predecessor: Node = this                         // Default predecessor
-  val max: Int = math.pow(2, m).toInt                   // Largest m - bit value
+  var k: BigInt = 0                                           // encrypt k here
+  var gotIt = false
+  var nodes: Iterable[ActorRef[Node.Command]] = Iterable.empty[ActorRef[Node.Command]]
+  var lastKeyValueReading: Option[Double] = None                // No Key Value Pair initially
+  var predecessor: Node = this                                // Default predecessor
+  val max: Int = math.pow(2, m).toInt                     // Largest m - bit value
   // Generate Hash Value for current Node
-  var hash: String = Hash.getHash(deviceId.toString)
+  var n: BigInt = Hash.encrypt(deviceId)
   var fingerTable: Array[FingerEntry] = new Array[FingerEntry](m)
-  context.log.info2("Node actor {}-{} started", groupId, deviceId)
   // Set up of finger table
-  for( k <- 0 until max - 1) {
-    val start = (deviceId + math.pow(2,k)).toInt % max
-    val end = (start + math.pow(2,k + 1).toInt) % max
-    val interval = Interval(start, end)
-    fingerTable(k) = new FingerEntry(start, interval, this)
-  }
-  // Join
+  initFingerTable()
 
+  // Can just call initFingerTable but need to declare it scala wise
+  // Join
   // Set Predecessor and successor Nodes
   override def onMessage(msg: Command): Behavior[Command] = {
+    import Chord.keyLookup
     msg match {
+      //case keyLookup =>
+      case receiveList(actors: Map[String, ActorRef[Node.Command]]) =>
+        gotIt = true
+        nodes = actors.values
+        this
       case "firstNode" =>
         context.log.debug("First Node in Hash Ring with ID: ", deviceId)
         initFingerTable()
@@ -60,12 +68,12 @@ class Node(context: ActorContext[Node.Command], groupId: String, deviceId: Int, 
         this
       // Write
       case FindPredecessor(key, replyTo) =>
-        // Check within range
-        val start = deviceId + 1 % max
-        val end = (this.successor.deviceId + 1) % max
+        val k = Hash.encrypt(key)           // What we are looking for
+        val start = fingerTable(0).getStart
+        val end = this.successor.fingerTable(0).getInterval.get_end
         val interval = Interval(start, end)
-        if (interval.valid(key)){                                         // Reachable
-          val closest = closest_preceding_finger(deviceId)               // Look for predecessor counter clockwise
+        if (interval.valid(k)){                                         // Reachable
+          val closest = closest_preceding_finger(n)               // Look for predecessor counter clockwise
           if(closest.deviceId == deviceId)                              // ONE Node
             replyTo ! ResultRecorded(deviceId, Some(this))
           else
@@ -74,13 +82,14 @@ class Node(context: ActorContext[Node.Command], groupId: String, deviceId: Int, 
         else
           replyTo ! ResultRecorded(deviceId, Some(this))
         this
+       // Key Lookup
       case FindSuccessor(key, replyTo) =>
         // Check within range
-        val start = deviceId + 1 % max
-        val end = (this.successor.deviceId + 1) % max
+        val start = fingerTable(0).getStart
+        val end = this.successor.fingerTable(0).getInterval.get_end
         val interval = Interval(start, end)
-        if (interval.valid(key)) {                                    // Reachable
-          val closest = closest_preceding_finger(deviceId)
+        if (interval.valid(k)) {                                    // Reachable
+          val closest = closest_preceding_finger(k)
           if(closest.deviceId == deviceId)                                // ONE Node
             replyTo ! ResultRecorded(deviceId, Some(this.successor))
           else
@@ -102,11 +111,12 @@ class Node(context: ActorContext[Node.Command], groupId: String, deviceId: Int, 
   }
   override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
     case PostStop =>
-      context.log.info2("Node actor {}-{} stopped", groupId, deviceId)
+      context.log.info2("Node actor {}-{} stopped", groupID, deviceId)
       this
   }
-  def ithFinger_start(i: Int): Int = {
-    (deviceId + Math.pow(2, i).toInt) % max
+  def ithFinger_start(i: Int): BigInt = {
+    val distance = Math.pow(2, i).toInt
+    (n + BigInt(distance)) % max
   }
   def initFingerTable(): Unit = {
     for(i <- 0 until m){
@@ -115,26 +125,18 @@ class Node(context: ActorContext[Node.Command], groupId: String, deviceId: Int, 
     }
     predecessor = this          // Set predecessor to self
   }
-  def closest_preceding_finger(id: Int): Node = {
+  def closest_preceding_finger(id: BigInt): Node = {
     // Note: Research paper says from m to 1 but (n, id) inclusive range => so exclusive range is equivalent, right?
-    for (i <- m - 1 to 0) {                   // Scan what we are looking for from farthest to closest
+    for (i <- m to 1) {                   // Scan what we are looking for from farthest to closest
       val start = ithFinger_start(i)
       val end = id
       val key = fingerTable(i).node.deviceId
+      val k = Hash.encrypt(key)
       val interval = Interval(start, end)
-      if (interval.valid(key))
+      if (interval.valid(k))
         return fingerTable(i).node            // Found node closest to what I'm looking for
     }
     this                                      // current node is closest lol all that scanning for nothing (get fucked kid)
-  }
-  def exist(id: Int): Boolean = {
-    if(id == deviceId) return true
-    var exist = false
-    /*
-    TODO:
-      How can we use GuardianNode to find if Node with id exist
-     */
-    exist
   }
   // By definition the first entry is the successor
   def successor: Node =
