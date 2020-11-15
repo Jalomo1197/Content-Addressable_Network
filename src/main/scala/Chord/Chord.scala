@@ -20,7 +20,12 @@ object Chord{
   */
   case class keyLookup(key: String, user: ActorRef[User.Command]) extends Command with Node.Command
   /*
+     @ deprecated
      this command is sent by a Node Actor and submitted to all other Node Actors
+  */
+  //case class updateFingerTables(newNodeID: String) extends Command
+  /*
+     this command is sent to all other Node Actors
   */
   case class updateFingerTable(newNodeID: String, node: ActorRef[Node.Command]) extends Command with Node.Command
 
@@ -29,7 +34,6 @@ object Chord{
 class Chord(context: ActorContext[Chord.Command], nodeAmount: Int) extends AbstractBehavior[Chord.Command](context) {
   // For immediate access to case classes
   import Chord._
-
   // Map for node Actors, access by NodeID
   private var nodes = Map.empty[String, ActorRef[Node.Command]]
   var IP_identification = "8.8.8.8"
@@ -38,16 +42,15 @@ class Chord(context: ActorContext[Chord.Command], nodeAmount: Int) extends Abstr
   for (n <- 0 until nodeAmount ){
     // key must be randomize too?
     // IP_identification must randomize
-
     // In Node.scala constructor: updateFingerTable is sent back to Chord
     val node = context.spawn(Node(IP_identification, key), s"node-$IP_identification")
     // new node now included in map
-
     nodes += IP_identification -> node
     // must set kick start node
     if (kickStartNode.equals("")) kickStartNode = IP_identification
     context.log.info("Node: " + IP_identification + " add to Chord")
   }
+
 
 
   override def onMessage(msg: Chord.Command): Behavior[Chord.Command] = {
