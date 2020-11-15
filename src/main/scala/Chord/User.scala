@@ -7,25 +7,34 @@ object User{
     Behaviors.setup(new User(_))
 
   trait Command
-  case class gotIT(value: String, key: Int) extends Command
-  case class whereIsIt(key: Int) extends Command
+  final case class queryResponse(key: String, value: Option[Double]) extends Command
 }
 
 
 class User(context: ActorContext[User.Command]) extends AbstractBehavior[User.Command](context) {
   import User._
+  import Chord.{getChordActor, keyLookup}
+  val chord: ActorRef[Chord.Command] = getChordActor.getReference
 
   override def onMessage(msg: Command): Behavior[User.Command] = {
     msg match {
-      case gotIT(value, key) =>
-        println(key + ": "+ value)
-      case whereIsIt(key) =>
-        println("Key entry DNE: " + key )
+      case queryResponse(key, value) =>
+        value match {
+          case None =>
+            context.log.info("KEY: " + key + " is not in distributed map")
+          case Some(v) =>
+            context.log.info("KEY: " + key + " found, VALUE: " + v)
+        }
     }
     this
   }
 
-
-  // Obtain Chord ACTOR, submit query
-  // Chord ACTOR ! query
+  /*
+      Asynchronous function:
+        Sends keyLookup command to Chord
+   */
+  def queryKey(key: String): Unit = {
+    context.log.info("USER sent query to CHORD, KEY: " + key)
+    chord ! keyLookup(key, context.self)
+  }
 }
