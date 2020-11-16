@@ -7,7 +7,7 @@ object User{
     Behaviors.setup(new User(_))
 
   trait Command
-  final case class queryResponse(key: String, value: Option[Double]) extends Command
+  final case class queryResponse(key: String, value: Option[String]) extends Command
 }
 
 
