@@ -31,6 +31,7 @@ object Chord{
       this Command is meant to import map values from application.config
    */
   final case class initializeNodesWithConfig(config: Config, replyTo: ActorRef[distributedMapInitialized]) extends Command
+  // Used for testing createTestProbe[distributedMapInitialized]
   final case class distributedMapInitialized(dictionary: Map[String, String])
 }
 
@@ -47,27 +48,30 @@ class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord
 
 
   override def onMessage(msg: Chord.Command): Behavior[Chord.Command] = {
-    import Node.{FindSuccessor}
     msg match {
       case keyLookup(key, user) =>
-        // Pass to random node to kick start algorithm
-        // Because Actors only process one message at a time, the finger for kickStartNode should be set
+        /* Pass to arbitrary node to kick start CHORD algorithm
+           Because Actors only process one message at a time, the
+           finger table for arbitrary node should be set already  */
         nodes(kickStartNode) ! keyLookup(key, user)
       case initializeNodesWithConfig(config, replyTo) =>
+        // Creating dictionary defined in config file: application.conf
         dictionary = config.as[Map[String, String]]("dictionary")
+        // For each entry created a Node Actor and append to map
         dictionary.foreach( entry => {
-          //val node = context.spawn(Node(entry._1, entry._2), s"node-$entry._1")
-          //nodes += entry._1 -> entry._2
-          //if (kickStartNode.equals("")) kickStartNode = entry._1
+          nodes += entry._1 -> context.spawn(Node(entry._1, entry._2), s"node-$entry._1")
           context.log.info("Node: " + entry._1 + " from dictionary added to Chord")
+          if (kickStartNode.equals("")) kickStartNode = entry._1 // Saving arbitrary node
         })
-        //nodes(kickStartNode) ! receiveList(nodes)
+        // Giving arbitrary node all other Node Actors, for Chord Algorithm operations
+        nodes(kickStartNode) ! receiveList(nodes)
+        // For testing. See ChordSpec.scala under test folder
         replyTo ! distributedMapInitialized(dictionary)
     }
     this
   }
 
-
+  /* User obtain ActorRef to Chord Singleton via Chord.getChordActor.getReference */
   def getReference: ActorRef[Command] = context.self
 
   /* Signal handling */
