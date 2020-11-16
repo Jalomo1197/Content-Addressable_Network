@@ -1,6 +1,8 @@
 package IoT_Temperture_testing
 
-
+import IoT_Temperture_example.Device.{Passivate, RecordTemperature, TemperatureRecorded}
+import IoT_Temperture_example.DeviceManager.{DeviceRegistered, ReplyDeviceList, RequestDeviceList, RequestTrackDevice}
+import IoT_Temperture_example._
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import org.scalatest.wordspec.AnyWordSpecLike
 

@@ -1,5 +1,7 @@
 package IoT_Temperture_testing
 
+import IoT_Temperture_example.Device
+import IoT_Temperture_example.Device.{ReadTemperature, RecordTemperature, RespondTemperature, TemperatureRecorded}
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import org.scalatest.wordspec.AnyWordSpecLike
 
