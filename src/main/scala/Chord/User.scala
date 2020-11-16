@@ -28,7 +28,6 @@ class User(context: ActorContext[User.Command]) extends AbstractBehavior[User.Co
     }
     this
   }
-
   /*
       Asynchronous function:
         Sends keyLookup command to Chord
