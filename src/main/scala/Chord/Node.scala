@@ -5,8 +5,8 @@ import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-
 import scala.math.BigInt.int2bigInt
+
 /*
 *  (key, value)
 * */
@@ -141,7 +141,7 @@ class Node(context: ActorContext[Node.Command], key: String, value: String)
     (n + BigInt(distance)) % max
   }
   def initFingerTable(): Unit = {
-    for(i <- 0 until m){
+    for(i <- 1 until m){
       val start = ithFinger_start(i)
       fingerTable(i) = new FingerEntry(start, Interval(start, ithFinger_start(i + 1)), this)
     }
