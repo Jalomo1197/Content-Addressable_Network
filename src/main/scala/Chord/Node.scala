@@ -1,6 +1,5 @@
 package Chord
 
-
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
@@ -11,19 +10,7 @@ object Node {
     Behaviors.setup(context => new Node(context, key: String, value: String))
   }
   trait Command
-  // Immutable Data
-  case class FindPredecessor(key: String, replyTo: ActorRef[ResultRecorded]) extends Command
-  final case class ResultRecorded(key: String, node: Option[Node])
-
-  case class FindSuccessor(key: String, replyTo: ActorRef[User.Command]) extends Command
-  final case class FindSuccessorRecorded(key: String, node: Option[Node])
-
-  final case class ReadKeyValuePairs(key: String, replyTo: ActorRef[RespondKeyValuePairs]) extends Command
-  final case class RespondKeyValuePairs(key: String, value: Option[String], replyTo: ActorRef[User.Command])
-
-  final case class RecordKeyValuePairs(key: String, value: Option[String], replyTo: ActorRef[KeyValuePairsRecorded]) extends Command
-  final case class KeyValuePairsRecorded(key: String, value: Option[String])
-
+  // Grab Node References
   case class receiveList(actors: Map[String, ActorRef[Node.Command]]) extends Command
 }
 
