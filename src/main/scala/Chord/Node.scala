@@ -1,10 +1,11 @@
 package Chord
 
+
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.scaladsl.LoggerOps
+
 import scala.math.BigInt.int2bigInt
 /*
 *  (key, value)
@@ -35,18 +36,23 @@ class Node(context: ActorContext[Node.Command], key: String, value: String)
   import Node._
   import Chord.keyLookup
   import User.queryResponse
+  // Key to store (i.e. 73.51.227.5)
+  var _key: String = key
+  // m - bit Identifier
   var m: Int = 0
-  var k: BigInt = 0                                           // encrypt k here
+  // encrypt k here
+  var k: BigInt = 0
   var gotIt = false
-  var nodes: Iterable[ActorRef[Node.Command]] = Iterable.empty[ActorRef[Node.Command]]
-  var lastKeyValueReading: Map[String, Option[String]] = Map.empty
-
   // Default predecessor
   var predecessor: Node = this
   // Largest m - bit value
   val max: Int = math.pow(2, m).toInt
   // Generate Hash Value for current Node
   var n: BigInt = Hash.encrypt(key)
+  var nodes: Iterable[ActorRef[Node.Command]] = Iterable.empty[ActorRef[Node.Command]]
+  var lastKeyValueReading: Map[BigInt, String] = Map.empty[BigInt, String]
+  // [49231231, "google.com"]
+  lastKeyValueReading += n -> value
   var fingerTable: Array[FingerEntry] = new Array[FingerEntry](m)
   // Set up of finger table
   initFingerTable()
@@ -60,19 +66,20 @@ class Node(context: ActorContext[Node.Command], key: String, value: String)
         val end = this.successor.fingerTable(0).getInterval.get_end
         val interval = Interval(start, end)
         val hash = Hash.encrypt(key)
-        if (interval.valid(hash)) {                                    // Reachable
-          val closest = closest_preceding_finger(k)
-          val value = lastKeyValueReading.getOrElse(this.successor.key, None)
+        // Reachable
+        if (interval.valid(hash)) {
+          val closest = closest_preceding_finger(hash)
+          val value = lastKeyValueReading.getOrElse(this.successor.n, "No Key Found")
           if(closest.key == key)                                // ONE Node
-            user ! queryResponse(key, value)
-          else
+            user ! queryResponse(key, Some(value))
+          //else
             //FindSuccessor(key, replyTo)
         }
-        else
-          //replyTo ! ResultRecorded(key, Some(this.successor))
+        else {
+          val value = lastKeyValueReading.getOrElse(this.n, "No key found")
+          user ! queryResponse(key, Some(value))
+        }
         this
-      //case queryResponse(key, value) =>
-      //this
       case receiveList(actors: Map[String, ActorRef[Node.Command]]) =>
         gotIt = true
         nodes = actors.values
@@ -81,9 +88,10 @@ class Node(context: ActorContext[Node.Command], key: String, value: String)
       // Write
       case FindPredecessor(key, replyTo) =>
         if(key == this.key){
-          lastKeyValueReading += key -> this.n
+          //lastKeyValueReading += key -> this.n
         }
-        val k = Hash.encrypt(key)           // What we are looking for
+        // This is what we are looking for
+        val k = Hash.encrypt(key)
         val start = fingerTable(0).getStart
         val end = this.successor.fingerTable(0).getInterval.get_end
         val interval = Interval(start, end)
@@ -105,24 +113,28 @@ class Node(context: ActorContext[Node.Command], key: String, value: String)
         val interval = Interval(start, end)
         if (interval.valid(k)) {                                    // Reachable
           val closest = closest_preceding_finger(k)
-          if(closest.key == key)                                // ONE Node
-            replyTo ! ResultRecorded(key, Some(this.successor))
-          else
-            FindSuccessor(key, replyTo)
+          return closest
         }
-        else
-          replyTo ! ResultRecorded(key, Some(this.successor))
-        this
-      case RecordKeyValuePairs(id, value, replyTo) =>
-        context.log.info2("Node Hash reading {} with {}", value, id)
-        lastKeyValueReading += id -> value
-        replyTo ! KeyValuePairsRecorded(key, value)
         this
     }
   }
   override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
     case PostStop =>
       this
+  }
+  def FindSuccessor(key: String): Option[ActorRef[Node.Command]] = {
+    // Check within range
+    val start = fingerTable(0).getStart
+    val end = this.successor.fingerTable(0).getInterval.get_end
+    val interval = Interval(start, end)
+    if (interval.valid(k)) {                                    // Reachable
+      val closest = closest_preceding_finger(k)
+      if(closest.key == key)                                // ONE Node
+        this.successor
+      else
+        None
+    }
+    Some(context.self)
   }
   def ithFinger_start(i: Int): BigInt = {
     val distance = Math.pow(2, i).toInt
