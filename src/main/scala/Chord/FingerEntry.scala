@@ -1,14 +1,14 @@
 package Chord
 
 
-class FingerEntry(start: BigInt, interval: Interval, var node: Node) {
+class FingerEntry(start: Int, interval: Interval, var node: Node) {
   def setNode(node: Node): Unit =
     this.node = node
   def getNode: Node =
     this.node
-  def getStart: BigInt =
+  def getStart: Int =
     this.start
-  def getHash: BigInt =
+  def getHash: Int =
     node.n
   def getInterval: Interval =
     this.interval

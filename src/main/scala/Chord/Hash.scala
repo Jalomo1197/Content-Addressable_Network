@@ -4,6 +4,7 @@ import java.security.MessageDigest
 import java.math.BigInteger
 
 object Hash {
+  // May adjust getHash to be more secure
   def getHash(k: String): String = {
     val md = MessageDigest.getInstance("SHA-1")
     val digest = md.digest(k.getBytes)
@@ -11,15 +12,21 @@ object Hash {
     val hashedString = bigInt.toString(16)
     hashedString
   }
-  def encrypt(hash: String): BigInt ={
+  def encrypt(hash: String, m: Int): Int = {
     val md = MessageDigest.getInstance("SHA-1")
-    val key = BigInt(md.digest(hash.getBytes("UTF-8")).map("%02x".format(_)).mkString,16)
-    key
+    val key = md.digest(hash.getBytes("UTF-8"))
+    val first4Bytes = key.slice(0,4)
+    var hashCode = 0
+    for (i <- first4Bytes.indices)
+      hashCode = (hashCode << 8) + (first4Bytes(i)& 0xff)
+    val mask = 0xffffffff >>> 32 - m
+    hashCode = hashCode & mask
+    hashCode
   }
 }
 object test extends App{
   val david = Hash.getHash("David")
-  val encrypt = Hash.encrypt(david)
+  //val encrypt = Hash.encrypt(david,)
   println(david)
-  println(encrypt)
+  //println(encrypt)
 }
