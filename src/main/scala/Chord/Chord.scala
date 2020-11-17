@@ -57,9 +57,11 @@ class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord
       case initializeNodesWithConfig(config, replyTo) =>
         // Creating dictionary defined in config file: application.conf
         dictionary = config.as[Map[String, String]]("dictionary")
+        // Calculating m bit identifier
+        val m: Int = (Math.log(dictionary.size) / Math.log(2)).toInt
         // For each entry created a Node Actor and append to map
         dictionary.foreach( entry => {
-          nodes += entry._1 -> context.spawn(Node(entry._1, entry._2), s"node-$entry._1")
+          nodes += entry._1 -> context.spawn(Node(entry._1, entry._2, m), s"node-$entry._1")
           context.log.info("Node: " + entry._1 + " from dictionary added to Chord")
           if (kickStartNode.equals("")) kickStartNode = entry._1 // Saving arbitrary node
         })

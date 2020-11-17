@@ -6,19 +6,26 @@ import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
 
 object Node {
-  def apply(key: String, value: String): Behavior[Command] = {
-    Behaviors.setup(context => new Node(context, key, value))
+  def apply(key: String, value: String, m: Int): Behavior[Command] = {
+    Behaviors.setup(context => new Node(context, key, value, m))
   }
   trait Command
   // Grab Node References
-  case class receiveList(actors: Map[String, ActorRef[Node.Command]]) extends Command
+  case class receiveList(toProcess: Map[String, ActorRef[Node.Command]]) extends Command
+  // To send to arbitrary node that has not been initialized
+  case class initializeNode(processed: Int, toProcess: Map[String, ActorRef[Node.Command]], included: List[ActorRef[Node.Command]]) extends Command
+  // Sent from nodes who have processed the initializeNode Command.
+  case class updateFingerTable(processed: Int, included: List[ActorRef[Node.Command]]) extends Command
 }
 
-class Node(context: ActorContext[Node.Command], key: String, value: String)
+class Node(context: ActorContext[Node.Command], key: String, value: String, m: Int)
   extends AbstractBehavior[Node.Command](context){
   import Node._
   import Chord.keyLookup
   import User.queryResponse
+  // TODO: // nodeToHash +=  n -> context.self
+
+  var processed: Int = 0
   // Key to store (i.e. 73.51.227.5)
   var _key: String = key
   // m - bit Identifier (# of nodes)
@@ -46,6 +53,37 @@ class Node(context: ActorContext[Node.Command], key: String, value: String)
   // Join
   override def onMessage(msg: Command): Behavior[Command] = {
     msg match {
+        // TODO _1: Update finger table with those references in included
+      case initializeNode(processed, toProcess, included) =>
+        // NOTE: First two sections of Finger Table (start, interval) should already be calculated by now
+        // NOTE: Last Node Actor reference in "included" STRICTLY IS the one who sent initializeNode Command
+
+        // Iterate through "included" list and update successor node references up to "processed"
+        // SCAN FROM TOP TO BOTTOM
+
+        // Append this nodes reference to "included" (context.self)
+        this.processed = processed + 1 // Including this node now
+
+        // If "toProcess" is NOT empty
+          // Now select an arbitrary node ref from "toProcess"
+          // Subtract that node from "toProcess"
+          // Send initializeNode(this.processed, toProcess, included)
+
+        // When "toProcess" is empty
+          // NOTE: this is the last node
+
+        // Send updateFingerTable(this.processed, included) to ALL Node Actor references in "included" (not to yourself (last index))
+        this
+
+      case updateFingerTable(processed, included) =>
+        // TODO _3: Iterate through finger table up to update successor node reference
+        if (this.processed < processed){
+          this.processed = processed
+          // TODO _3
+        }
+        // Else we ignore update messaged because we have already updated successor node references pass "processed: Int" in message
+        this
+
       case keyLookup(key, user) =>
         val distance = ithFinger_start(1)
         val interval = Interval(n + distance, this.successor.n + distance)
@@ -66,12 +104,29 @@ class Node(context: ActorContext[Node.Command], key: String, value: String)
           user ! queryResponse(key, Some(value))
         this
       // see TODO BIG: initFingerTable()
-      case receiveList(actors: Map[String, ActorRef[Node.Command]]) =>
+      case receiveList(toProcess) =>
+        /* THESE ARE PREVIOUS NOTES, left for reference can ignore now
         // In regards to TODO BIG
         // Don't you have to do a for loop and for though all node refs to send updated "m" and list of node Refs? (new case class (m, list, includedList))
+        */
+
+        // NOTE: finger table should be constructed by now
+
+        // Set up "included" list just having context.self
+        // processed = 1;
+
+        // Subtract this node's reference (context.self) from toProcess
+
+        // If "toProcess" is NOT empty
+          // Now select an arbitrary node ref from "toProcess"
+          // Subtract that node from "toProcess"
+          // Send initializeNode(this.processed, toProcess, included)
+
+        // When "toProcess" is empty
+          // NOTE: this is the last node
 
         gotIt = true
-        nodes = actors.values
+        nodes = toProcess.values
         this.m = nodes.size
         this
     }
