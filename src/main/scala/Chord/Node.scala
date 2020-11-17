@@ -7,7 +7,7 @@ import akka.actor.typed.scaladsl.Behaviors
 
 object Node {
   def apply(key: String, value: String): Behavior[Command] = {
-    Behaviors.setup(context => new Node(context, key: String, value: String))
+    Behaviors.setup(context => new Node(context, key, value))
   }
   trait Command
   // Grab Node References
@@ -38,6 +38,7 @@ class Node(context: ActorContext[Node.Command], key: String, value: String)
   lastKeyValueReading += n -> value
   var hashToKey: Map[Int, String] = Map.empty[Int, String]
   hashToKey += n -> key
+  // TODO Question: class FingerEntry(start: Int, interval: Interval, node: Node), Should "node" be ActorRef[Node.Command] instead of class Node?
   var fingerTable: Array[FingerEntry] = new Array[FingerEntry](m)
   // Set up of finger table
   initFingerTable()
@@ -64,7 +65,11 @@ class Node(context: ActorContext[Node.Command], key: String, value: String)
         else
           user ! queryResponse(key, Some(value))
         this
+      // see TODO BIG: initFingerTable()
       case receiveList(actors: Map[String, ActorRef[Node.Command]]) =>
+        // In regards to TODO BIG
+        // Don't you have to do a for loop and for though all node refs to send updated "m" and list of node Refs? (new case class (m, list, includedList))
+
         gotIt = true
         nodes = actors.values
         this.m = nodes.size
@@ -80,6 +85,9 @@ class Node(context: ActorContext[Node.Command], key: String, value: String)
     (n + distance) % max
   }
   def initFingerTable(): Unit = {
+    // TODO BIG: Question: the first node has m = 0, this loop therefore does not execute, part of algorithm?
+    // Or does the next node construction tell this node to update? If so where do you send this node ref to other nodes? and where in the code
+    // do other nodes send updates to this node?
     for(i <- 1 until m){
       val start = ithFinger_start(i)
       fingerTable(i) = new FingerEntry(start, Interval(start, ithFinger_start(i + 1)), this)

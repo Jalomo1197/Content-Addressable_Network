@@ -36,4 +36,13 @@ class User(context: ActorContext[User.Command]) extends AbstractBehavior[User.Co
     context.log.info("USER sent query to CHORD, KEY: " + key)
     chord ! keyLookup(key, context.self)
   }
+
+
+  /* Signal handling */
+  override def onSignal: PartialFunction[Signal, Behavior[User.Command]] = {
+    case PostStop =>
+      context.log.info("User actor stopped")
+      this
+  }
+
 }
