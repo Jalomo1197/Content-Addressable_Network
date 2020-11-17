@@ -11,7 +11,7 @@ object Node {
   }
   trait Command
   // Grab Node References     toProcess[Keys, nodeRef], right?
-  case class receiveList(toProcess: Map[String, ActorRef[Node.Command]], included: List[ActorRef[Node.Command]]) extends Command
+  case class receiveList(toProcess: Map[String, ActorRef[Node.Command]]) extends Command
   // To send to arbitrary node that has not been initialized
   case class initializeNode(processed: Int, toProcess: Map[String, ActorRef[Node.Command]], included: List[ActorRef[Node.Command]]) extends Command
   // Sent from nodes who have processed the initializeNode Command.
@@ -34,10 +34,12 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
   val max: Int = math.pow(2, m).toInt
   // Generate Hash Value for current Node (Use var n to maintain consistency with Research Publication)
   var n: Int = Hash.encrypt(key, m)
+  // TODO: INCLUDED DOES NOT HAVE KEYS
   var nodeToHash: Map[ActorRef[Node.Command], Int] = Map.empty[ActorRef[Node.Command], Int]
   var hashToKey: Map[Int, String] = Map.empty[Int, String]
   // [49231231, "google.com"] [hash(key), value]
   var lastKeyValueReading: Map[Int, String] = Map.empty[Int, String]
+  // This node adds itself to map
   nodeToHash += context.self -> n
   hashToKey += n -> key
   lastKeyValueReading += n -> value
@@ -52,6 +54,8 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
         // NOTE: Last Node Actor reference in "included" STRICTLY IS the one who sent initializeNode Command
 
         // Iterate through "included" list and update successor node references up to "processed"
+        for (node <- included.indices)
+
         // SCAN FROM TOP TO BOTTOM
 
         // Append this nodes reference to "included" (context.self)
@@ -95,9 +99,9 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
         else
           user ! queryResponse(key, Some(value))
         this
-      case receiveList(toProcess, included) =>
+      case receiveList(toProcess) =>
         processed = 1
-        val _included = context.self :: included
+        val included: List[ActorRef[Node.Command]] = List(context.self)
         // Subtract this node's reference (context.self) from toProcess
         toProcess -= key
         if(toProcess.nonEmpty){
@@ -106,7 +110,7 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
           val new_node = toProcess(new_node_key)
           // Subtract that node from "toProcess"
           toProcess -= new_node_key
-          new_node ! initializeNode(this.processed, toProcess, _included)
+          new_node ! initializeNode(this.processed, toProcess, included)
         }
         else{
           // Set up of finger table
