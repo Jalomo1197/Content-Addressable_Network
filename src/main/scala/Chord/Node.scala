@@ -45,6 +45,8 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
   lastKeyValueReading += n -> value
   var hashToKey: Map[Int, String] = Map.empty[Int, String]
   hashToKey += n -> key
+  var nodeToHash: Map[ActorRef[Node.Command], Int] = Map.empty[ActorRef[Node.Command], Int]
+  nodeToHash += context.self -> n
   // TODO Question: class FingerEntry(start: Int, interval: Interval, node: Node), Should "node" be ActorRef[Node.Command] instead of class Node?
   var fingerTable: Array[FingerEntry] = new Array[FingerEntry](m)
   // Set up of finger table
@@ -86,18 +88,19 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
 
       case keyLookup(key, user) =>
         val distance = ithFinger_start(1)
-        val interval = Interval(n + distance, this.successor.n + distance)
+        val interval = Interval(n + distance, nodeToHash(this.successor) + distance)
         val hash = Hash.encrypt(key, m)
-        val value = lastKeyValueReading.getOrElse(this.successor.n, "No Key Found")
+        val value = lastKeyValueReading.getOrElse(nodeToHash(this.successor), "No Key Found")
         // Reachable
         if (interval.contains(hash)) {
-          val closest = closest_preceding_finger(hash)
+          val closest_node = closest_preceding_finger(hash)
+          val closest_hash = nodeToHash(closest_node)
           // Single Node
-          if(closest.key == key)
+          if(hashToKey(closest_hash) == key)
             user ! queryResponse(key, Some(value))
           // No Key Found must call Find Predecessor and go to that Node
           else
-            findPredecessor(hash).context.self ! keyLookup(key, user)
+            findPredecessor(hash) ! keyLookup(key, user)
         }
         // Found Key (More than One Node)
         else
@@ -108,6 +111,7 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
         /* THESE ARE PREVIOUS NOTES, left for reference can ignore now
         // In regards to TODO BIG
         // Don't you have to do a for loop and for though all node refs to send updated "m" and list of node Refs? (new case class (m, list, includedList))
+<<<<<<< HEAD
         */
 
         // NOTE: finger table should be constructed by now
@@ -125,6 +129,8 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
         // When "toProcess" is empty
           // NOTE: this is the last node
 
+=======
+>>>>>>> 42abe0d4c7cb821438659b7d908292385ddb2978
         gotIt = true
         nodes = toProcess.values
         this.m = nodes.size
@@ -145,37 +151,36 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
     // do other nodes send updates to this node?
     for(i <- 1 until m){
       val start = ithFinger_start(i)
-      fingerTable(i) = new FingerEntry(start, Interval(start, ithFinger_start(i + 1)), this)
+      fingerTable(i) = new FingerEntry(start, Interval(start, ithFinger_start(i + 1)), context.self)
     }
     // Set predecessor to self
     predecessor = context.self
   }
-  /*
-  *   Is it guaranteed the  list of references I receive from Chord are the same Nodes reference the Nodes have of themselves?
-   */
-  def findPredecessor(id: Int): Node = {
+  def findPredecessor(id: Int): ActorRef[Node.Command] = {
       val distance = ithFinger_start(1)
-      val interval = Interval(n + distance, this.successor.n + distance)
+      val successor_to_id = nodeToHash(this.successor)    // Successor guaranteed
+      val interval = Interval(n + distance, successor_to_id + distance)
       // When id belongs to node's successor => we found the predecessor
       if(!interval.contains(id))
-        return closest_preceding_finger(id)       // Continue moving counter clockwise
-    this                                          // Found Predecessor
+        return closest_preceding_finger(id)                   // Continue moving counter clockwise
+    context.self                                              // Found Predecessor
   }
-  def closest_preceding_finger(id: Int): Node = {
+  def closest_preceding_finger(id: Int): ActorRef[Node.Command] = {
     // Note: Research paper says from m to 1 but (n, id) inclusive range => so exclusive range is equivalent.
     // Scan what we are looking for from farthest to closest
     for (i <- m to 1) {
       val distance = ithFinger_start(1)
       val interval = Interval(n + distance, id)
-      val preceding_ID = fingerTable(1).node.n
+      val preceding_ID_node = fingerTable(1).node      // Get Hash
+      val preceding_ID = nodeToHash(preceding_ID_node)
       // Found node closest to what I'm looking for
       if (interval.contains(preceding_ID))
         return fingerTable(i).node
     }
     // current node is closest lol all that scanning for nothing (get fucked kid)
-    this
+    context.self
   }
   // By definition the first entry is the successor
-  def successor: Node =
+  def successor: ActorRef[Node.Command] =
     fingerTable(0).node
 }
