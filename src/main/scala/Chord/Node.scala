@@ -128,9 +128,6 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
 
         // When "toProcess" is empty
           // NOTE: this is the last node
-
-=======
->>>>>>> 42abe0d4c7cb821438659b7d908292385ddb2978
         gotIt = true
         nodes = toProcess.values
         this.m = nodes.size
