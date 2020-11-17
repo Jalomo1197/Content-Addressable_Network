@@ -10,28 +10,23 @@ object Node {
     Behaviors.setup(context => new Node(context, key, value, m))
   }
   trait Command
-  // Grab Node References
-  case class receiveList(toProcess: Map[String, ActorRef[Node.Command]]) extends Command
+  // Grab Node References     toProcess[Keys, nodeRef], right?
+  case class receiveList(toProcess: Map[String, ActorRef[Node.Command]], included: List[ActorRef[Node.Command]]) extends Command
   // To send to arbitrary node that has not been initialized
   case class initializeNode(processed: Int, toProcess: Map[String, ActorRef[Node.Command]], included: List[ActorRef[Node.Command]]) extends Command
   // Sent from nodes who have processed the initializeNode Command.
   case class updateFingerTable(processed: Int, included: List[ActorRef[Node.Command]]) extends Command
 }
-
+// m - bit Identifier (log base 2 of # of nodes) i.e (8 nodes yield a 3-bit modifier)
 class Node(context: ActorContext[Node.Command], key: String, value: String, m: Int)
   extends AbstractBehavior[Node.Command](context){
   import Node._
   import Chord.keyLookup
   import User.queryResponse
-  // TODO: // nodeToHash +=  n -> context.self
-
+  // Number of Nodes which are considered "active" within the hash ring
   var processed: Int = 0
-  // Key to store (i.e. 73.51.227.5)
-  var _key: String = key
-  // m - bit Identifier (# of nodes)
-  var m: Int = 0
-  // encrypt k here
-  var k: Int = 0
+  // Activated when the first node receives the list of actors from the User
+  var nodes: List[ActorRef[Node.Command]] = List.empty[ActorRef[Node.Command]]
   var gotIt = false
   // Default predecessor
   var predecessor: ActorRef[Node.Command] = context.self
@@ -39,19 +34,15 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
   val max: Int = math.pow(2, m).toInt
   // Generate Hash Value for current Node (Use var n to maintain consistency with Research Publication)
   var n: Int = Hash.encrypt(key, m)
-  var nodes: Iterable[ActorRef[Node.Command]] = Iterable.empty[ActorRef[Node.Command]]
+  var nodeToHash: Map[ActorRef[Node.Command], Int] = Map.empty[ActorRef[Node.Command], Int]
+  var hashToKey: Map[Int, String] = Map.empty[Int, String]
   // [49231231, "google.com"] [hash(key), value]
   var lastKeyValueReading: Map[Int, String] = Map.empty[Int, String]
-  lastKeyValueReading += n -> value
-  var hashToKey: Map[Int, String] = Map.empty[Int, String]
-  hashToKey += n -> key
-  var nodeToHash: Map[ActorRef[Node.Command], Int] = Map.empty[ActorRef[Node.Command], Int]
   nodeToHash += context.self -> n
-  // TODO Question: class FingerEntry(start: Int, interval: Interval, node: Node), Should "node" be ActorRef[Node.Command] instead of class Node?
+  hashToKey += n -> key
+  lastKeyValueReading += n -> value
+  // Initialized when the Node receives list of actors from User
   var fingerTable: Array[FingerEntry] = new Array[FingerEntry](m)
-  // Set up of finger table
-  initFingerTable()
-  // Can just call initFingerTable but need to declare it scala wise
   // Join
   override def onMessage(msg: Command): Behavior[Command] = {
     msg match {
@@ -64,19 +55,18 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
         // SCAN FROM TOP TO BOTTOM
 
         // Append this nodes reference to "included" (context.self)
-        this.processed = processed + 1 // Including this node now
-
-        // If "toProcess" is NOT empty
+        // Including this node now
+        this.processed = processed + 1
+        if (toProcess.nonEmpty){
           // Now select an arbitrary node ref from "toProcess"
           // Subtract that node from "toProcess"
           // Send initializeNode(this.processed, toProcess, included)
-
-        // When "toProcess" is empty
+        }
+        else{
           // NOTE: this is the last node
-
-        // Send updateFingerTable(this.processed, included) to ALL Node Actor references in "included" (not to yourself (last index))
+          // Send updateFingerTable(this.processed, included) to ALL Node Actor references in "included" (not to yourself (last index))
+        }
         this
-
       case updateFingerTable(processed, included) =>
         // TODO _3: Iterate through finger table up to update successor node reference
         if (this.processed < processed){
@@ -85,7 +75,6 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
         }
         // Else we ignore update messaged because we have already updated successor node references pass "processed: Int" in message
         this
-
       case keyLookup(key, user) =>
         val distance = ithFinger_start(1)
         val interval = Interval(n + distance, nodeToHash(this.successor) + distance)
@@ -106,31 +95,26 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
         else
           user ! queryResponse(key, Some(value))
         this
-      // see TODO BIG: initFingerTable()
-      case receiveList(toProcess) =>
-        /* THESE ARE PREVIOUS NOTES, left for reference can ignore now
-        // In regards to TODO BIG
-        // Don't you have to do a for loop and for though all node refs to send updated "m" and list of node Refs? (new case class (m, list, includedList))
-<<<<<<< HEAD
-        */
-
-        // NOTE: finger table should be constructed by now
-
-        // Set up "included" list just having context.self
-        // processed = 1;
-
+      case receiveList(toProcess, included) =>
+        processed = 1
+        val _included = context.self :: included
         // Subtract this node's reference (context.self) from toProcess
-
-        // If "toProcess" is NOT empty
+        toProcess -= key
+        if(toProcess.nonEmpty){
           // Now select an arbitrary node ref from "toProcess"
+          val new_node_key = toProcess.keys.toList.head
+          val new_node = toProcess(new_node_key)
           // Subtract that node from "toProcess"
-          // Send initializeNode(this.processed, toProcess, included)
-
-        // When "toProcess" is empty
-          // NOTE: this is the last node
-        gotIt = true
-        nodes = toProcess.values
-        this.m = nodes.size
+          toProcess -= new_node_key
+          new_node ! initializeNode(this.processed, toProcess, _included)
+        }
+        else{
+          // Set up of finger table
+          initFingerTable()
+          gotIt = true
+          // Should I grab the keys here ??????
+          this.nodes = toProcess.values.toList
+        }
         this
     }
   }
