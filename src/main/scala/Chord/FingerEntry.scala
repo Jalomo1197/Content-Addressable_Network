@@ -1,15 +1,15 @@
 package Chord
 
+import akka.actor.typed.ActorRef
 
-class FingerEntry(start: Int, interval: Interval, var node: Node) {
-  def setNode(node: Node): Unit =
+
+class FingerEntry(start: Int, interval: Interval, var node: ActorRef[Node.Command]) {
+  def setNode(node: ActorRef[Node.Command]): Unit =
     this.node = node
-  def getNode: Node =
+  def getNode: ActorRef[Node.Command] =
     this.node
   def getStart: Int =
     this.start
-  def getHash: Int =
-    node.n
   def getInterval: Interval =
     this.interval
 }
