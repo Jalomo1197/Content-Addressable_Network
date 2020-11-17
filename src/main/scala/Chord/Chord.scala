@@ -42,18 +42,18 @@ class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord
   //val config: Config = ConfigFactory.load()
   var dictionary: Map[String, String] = Map.empty[String, String]
   // Map for node Actors, access by NodeID
-  private var nodes = Map.empty[String, ActorRef[Node.Command]]
+  private var nodes = Map.empty[Int, ActorRef[Node.Command]]
   var kickStartNode:  String = ""
-
-
+  var node_withLowestHash: Option[ActorRef[Node.Command]] = None
+  var lowest_hashedKey : Int = Int.MaxValue
 
   override def onMessage(msg: Chord.Command): Behavior[Chord.Command] = {
     msg match {
+
       case keyLookup(key, user) =>
-        /* Pass to arbitrary node to kick start CHORD algorithm
-           Because Actors only process one message at a time, the
-           finger table for arbitrary node should be set already  */
-        nodes(kickStartNode) ! keyLookup(key, user)
+        /* Pass to node with lowest hash id to start CHORD algorithm */
+        node_withLowestHash.get ! keyLookup(key, user)
+
       case initializeNodesWithConfig(config, replyTo) =>
         // Creating dictionary defined in config file: application.conf
         dictionary = config.as[Map[String, String]]("dictionary")
@@ -61,12 +61,23 @@ class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord
         val m: Int = (Math.log(dictionary.size) / Math.log(2)).toInt
         // For each entry created a Node Actor and append to map
         dictionary.foreach( entry => {
-          nodes += entry._1 -> context.spawn(Node(entry._1, entry._2, m), s"node-$entry._1")
-          context.log.info("Node: " + entry._1 + " from dictionary added to Chord")
-          if (kickStartNode.equals("")) kickStartNode = entry._1 // Saving arbitrary node
+          // Creating the hashed key
+          val hashedKey: Int = Hash.encrypt(entry._1, m)
+          // Spawning a new node with id being the hashedKey
+          val newNode =  context.spawn(Node(entry._1, entry._2, m), s"node-$hashedKey")
+          // Setting start node (for queries) to node with lowest hash
+          if (hashedKey <= lowest_hashedKey) node_withLowestHash = Some(newNode)
+          // Adding node to map for back up (if start node fails or exits)
+          nodes += hashedKey -> newNode
+          // logging completed action
+          context.log.info("Entry: (" + entry._1 + ", "+ entry._2 +") from dictionary added to Chord. With Node Hash ID: " + hashedKey)
+
+          // send
         })
+
+
         // Giving arbitrary node all other Node Actors, for Chord Algorithm operations
-        nodes(kickStartNode) ! receiveList(nodes)
+       // nodes(kickStartNode) ! receiveList(nodes)
         // For testing. See ChordSpec.scala under test folder
         replyTo ! distributedMapInitialized(dictionary)
     }
