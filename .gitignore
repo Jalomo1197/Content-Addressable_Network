@@ -60,5 +60,8 @@ Thumbs.db
 *.flv
 *.mov
 *.wmv
->>>>>>> 1f63ca38da193c2f664fb6401fe3750c9da07cc2
+
+#ignore bsp
+
+*.bsp
 
