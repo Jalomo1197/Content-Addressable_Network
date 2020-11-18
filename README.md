@@ -78,12 +78,15 @@ which is a reference to the loosely-organized peer-to-peer application for a ref
 `Availability:` 
 
 
-Chord automatically adjusts its internal tables utilizing `update others` when a node joins or is removed.
+*Chord automatically adjusts its internal tables utilizing `update others` when a node joins or is removed.
 
 
 The reflected newly joined nodes as well as node failures, ensuring that the node responsible for a key can always be found when the network is changed.
+
 * New nodes learns the identity of an existing Chord node (N~) = masterNode`(MN)` by having reference to the manager node.
 New node (N) initialize its state and add itself to the existing Chord network, as follows.
+
 * Initializing fingers and predecessor: Node N learns its predecessor and fingers by asking `MN` to look them up, using the
 init finger table, find successor for each of the (m) finger entries would give a runtime of O(m log N)
+
 * Updating fingers of existing nodes: Node (N) will need to be entered into the finger tables of some existing nodes utilizing the `update_finger_table` function.
