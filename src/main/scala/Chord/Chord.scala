@@ -3,7 +3,7 @@ package Chord
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import net.ceedubs.ficus.Ficus._
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 
 
 
@@ -38,7 +38,6 @@ object Chord{
 class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord.Command](context) {
   // For immediate access to case classes
   import Chord._
-  import Node.receiveList
 
   var dictionary: Map[String, String] = Map.empty[String, String]
   // Map for Node Actors. accessed by NodeID which is the hashed key
@@ -47,7 +46,7 @@ class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord
   var managerNode: Option[ActorRef[Node.Command]] = None
 
   override def onMessage(msg: Chord.Command): Behavior[Chord.Command] = {
-    import Node.{join}
+    import Node.join
     msg match {
 
       case keyLookup(key, user) =>
@@ -64,7 +63,7 @@ class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord
           // Creating the hashed key
           val hashedKey: Int = Hash.encrypt(entry._1, m)
           // Spawning a new node with id being the hashedKey
-          val newNode =  context.spawn(Node(entry._1, entry._2, m, hashedKey), s"node-$hashedKey")
+          val newNode = context.spawn(Node(entry._1, entry._2, m, hashedKey), s"node-$hashedKey")
           // Setting start node (for queries) to node with lowest hash
           if (managerNode.isEmpty) managerNode = Some(newNode)
           // Adding node to map for back up (if start node fails or exits)
@@ -81,8 +80,10 @@ class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord
     this
   }
 
+
   /* User obtain ActorRef to Chord Singleton via Chord.getChordActor.getReference */
   def getReference: ActorRef[Command] = context.self
+
 
   /* Signal handling */
   override def onSignal: PartialFunction[Signal, Behavior[Chord.Command]] = {
