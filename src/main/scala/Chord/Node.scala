@@ -6,10 +6,11 @@ import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
 
 object Node {
-  def apply(key: String, value: String, m: Int): Behavior[Command] = {
-    Behaviors.setup(context => new Node(context, key, value, m))
+  def apply(key: String, value: String, m: Int, hashedKey: Int): Behavior[Command] = {
+    Behaviors.setup(context => new Node(context, key, value, m, hashedKey))
   }
   trait Command
+  case class join(node: ActorRef[Node.Command], hashedKey: Int) extends Command
   // Grab Node References     toProcess[Keys, nodeRef], right?
   case class receiveList(toProcess: Map[String, ActorRef[Node.Command]]) extends Command
   // To send to arbitrary node that has not been initialized
@@ -18,7 +19,7 @@ object Node {
   case class updateFingerTable(processed: Int, included: List[ActorRef[Node.Command]]) extends Command
 }
 // m - bit Identifier (log base 2 of # of nodes) i.e (8 nodes yield a 3-bit modifier)
-class Node(context: ActorContext[Node.Command], key: String, value: String, m: Int)
+class Node(context: ActorContext[Node.Command], key: String, value: String, m: Int, hashedKey: Int)
   extends AbstractBehavior[Node.Command](context){
   import Node._
   import Chord.keyLookup
@@ -32,22 +33,23 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
   var predecessor: ActorRef[Node.Command] = context.self
   // Largest m - bit value
   val max: Int = math.pow(2, m).toInt
-  // Generate Hash Value for current Node (Use var n to maintain consistency with Research Publication)
-  var n: Int = Hash.encrypt(key, m)
   // TODO: INCLUDED DOES NOT HAVE KEYS
   var nodeToHash: Map[ActorRef[Node.Command], Int] = Map.empty[ActorRef[Node.Command], Int]
   var hashToKey: Map[Int, String] = Map.empty[Int, String]
   // [49231231, "google.com"] [hash(key), value]
   var lastKeyValueReading: Map[Int, String] = Map.empty[Int, String]
   // This node adds itself to map
-  nodeToHash += context.self -> n
-  hashToKey += n -> key
-  lastKeyValueReading += n -> value
+  nodeToHash += context.self -> hashToKey
+  hashToKey += hashedKey -> key
+  lastKeyValueReading += hashedKey -> value
   // Initialized when the Node receives list of actors from User
   var fingerTable: Array[FingerEntry] = new Array[FingerEntry](m)
   // Join
   override def onMessage(msg: Command): Behavior[Command] = {
     msg match {
+      case join(node, hashedKey) =>
+
+        this
         // TODO _1: Update finger table with those references in included
       case initializeNode(processed, toProcess, included) =>
         // NOTE: First two sections of Finger Table (start, interval) should already be calculated by now
@@ -81,7 +83,7 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
         this
       case keyLookup(key, user) =>
         val distance = ithFinger_start(1)
-        val interval = Interval(n + distance, nodeToHash(this.successor) + distance)
+        val interval = Interval(hashedKey + distance, nodeToHash(this.successor) + distance)
         val hash = Hash.encrypt(key, m)
         val value = lastKeyValueReading.getOrElse(nodeToHash(this.successor), "No Key Found")
         // Reachable
@@ -128,7 +130,7 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
   }
   def ithFinger_start(i: Int): Int = {
     val distance = Math.pow(2, i).toInt
-    (n + distance) % max
+    (hashedKey + distance) % max
   }
   def initFingerTable(): Unit = {
     // TODO BIG: Question: the first node has m = 0, this loop therefore does not execute, part of algorithm?
@@ -144,7 +146,7 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
   def findPredecessor(id: Int): ActorRef[Node.Command] = {
       val distance = ithFinger_start(1)
       val successor_to_id = nodeToHash(this.successor)    // Successor guaranteed
-      val interval = Interval(n + distance, successor_to_id + distance)
+      val interval = Interval(hashedKey + distance, successor_to_id + distance)
       // When id belongs to node's successor => we found the predecessor
       if(!interval.contains(id))
         return closest_preceding_finger(id)                   // Continue moving counter clockwise
@@ -155,7 +157,7 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
     // Scan what we are looking for from farthest to closest
     for (i <- m to 1) {
       val distance = ithFinger_start(1)
-      val interval = Interval(n + distance, id)
+      val interval = Interval(hashedKey + distance, id)
       val preceding_ID_node = fingerTable(1).node      // Get Hash
       val preceding_ID = nodeToHash(preceding_ID_node)
       // Found node closest to what I'm looking for
