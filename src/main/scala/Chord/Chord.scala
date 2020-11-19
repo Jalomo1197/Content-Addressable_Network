@@ -71,7 +71,7 @@ class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord
           // logging completed action
           context.log.info("Entry: (" + entry._1 + ", "+ entry._2 +") from dictionary added to Chord. With Node Hash ID: " + hashedKey)
           // Send to manager node
-          managerNode.get ! join(newNode, hashedKey)
+          newNode ! join(managerNode.get)
         })
 
         // For testing and Driver Actor. See ChordSpec.scala under test folder

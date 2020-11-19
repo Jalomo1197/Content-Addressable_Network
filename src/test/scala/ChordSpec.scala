@@ -8,6 +8,8 @@ import scala.concurrent.duration._
 
 class ChordSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
   import Chord.{distributedMapInitialized, initializeNodesWithConfig}
+
+
   "Chord actor import values from application.conf" in {
     val receiver = createTestProbe[distributedMapInitialized]()
     val ChordActor = spawn(Chord())
@@ -22,5 +24,8 @@ class ChordSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       configDictionary.get(e._1) should not equal(None)
     })
   }
+
+
+
 
 }

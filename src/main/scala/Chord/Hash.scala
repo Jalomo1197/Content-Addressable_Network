@@ -19,7 +19,7 @@ object Hash {
     var hashCode = 0
     for (i <- first4Bytes.indices)
       hashCode = (hashCode << 8) + (first4Bytes(i)& 0xff)
-    val mask = 0xffffffff >>> 32 - m
+    val mask = 0xffffffff >>> 16 - m
     hashCode = hashCode & mask
     hashCode
   }

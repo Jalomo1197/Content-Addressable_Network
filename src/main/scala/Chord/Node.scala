@@ -42,7 +42,8 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
   var nodeToHash: Map[ActorRef[Node.Command], Int] = Map.empty[ActorRef[Node.Command], Int]
   var hashToNode: Map[Int, ActorRef[Node.Command]] = Map.empty[Int, ActorRef[Node.Command]]
   // Initialized when the Node receives list of actors from User
-  var fingerTable: Array[FingerEntry] = new Array[FingerEntry](m)
+  var fingerTable: Array[FingerEntry] = new Array[FingerEntry](m + 1)
+  fingerTable.foreach(finger =>  new FingerEntry(0, null, null))
   var managerNode : Option[ActorRef[Node.Command]] = None
 
   // This node adds itself to map
@@ -55,11 +56,12 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
     msg match {
       //  Only new nodes process this command
       case join(managerNode) =>
-
+        context.log.info("New Node: ("+ key + ", " + value + ") requesting join" )
         if (context.self.equals(managerNode)) // newNode is the only node in the network
           onlyNodeInNetwork()
         else                                  // else instruct manager node to find successor of this new node
           managerNode ! find_successor_of(this.hashedKey, context.self, initTable_type, -1)
+        context.log.info("Node: ("+ key + ", " + value + ") has reference to manager node")
         this.managerNode = Some(managerNode)
 
 
@@ -189,9 +191,9 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
 * ***************************************************************************************************************/
     // Purpose: Changes made to this nodes finger table
     def onlyNodeInNetwork(): Unit = {                                           // new node perspective
+      context.log.info("First node in network up and running")
       for (i <- 1 to m) {
-        this.fingerTable (i).node = context.self
-        this.predecessor = context.self
+        this.fingerTable(i) = new FingerEntry(hashedKey,new Interval(hashedKey, hashedKey),context.self)
       }
     }
 
