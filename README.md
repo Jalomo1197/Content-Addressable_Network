@@ -38,6 +38,14 @@ The source to the documentation can be found at:
 https://pdos.csail.mit.edu/papers/chord:sigcomm01/chord_sigcomm.pdf <br>
 https://doc.akka.io/docs/akka/current/
 
+# Visualization with R
+
+Utilizing the Circilize methodology we map the values from the configuration file into R representing which location each Movie gets assigned to
+the chord. There were 5 different algorithm procedures in R all utilizing the SHA-1 methodology to encrypt the name.
+The results on the image become very pixelated as the size of entries get larger.
+
+![Alt text](Rplot.png?raw=true "Title")
+
 
 # Design Architecture and Implementations
 We are using typed Akka Behaviors model system to interact and manipulate Chord through actors.
@@ -78,7 +86,7 @@ which is a reference to the loosely-organized peer-to-peer application for a ref
 `Availability:` 
 
 
-*Chord automatically adjusts its internal tables utilizing `update others` when a node joins or is removed.
+* Chord automatically adjusts its internal tables utilizing `update others` when a node joins or is removed.
 
 
 The reflected newly joined nodes as well as node failures, ensuring that the node responsible for a key can always be found when the network is changed.
