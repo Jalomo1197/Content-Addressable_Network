@@ -4,27 +4,29 @@ import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
-import response.{successor_type, predecessor_type,  updateOthers_type, initTable_type}
+import response.{FT_entry_update, initTable_type, predecessor_type, successor_type, updateOthers_type, key_response}
 
 object Node {
   def apply(key: String, value: String, m: Int, hashedKey: Int): Behavior[Command] = {
     Behaviors.setup(context => new Node(context, key, value, m, hashedKey))
   }
   trait Command
-  //case class update_others() extends Command
-
-  case class init_table() extends Command
+  // Found Key!
+  case class replyToUser(user: ActorRef[User.Command]) extends Command
+  // new nodes perspective
+  case class init_table(pred: ActorRef[Node.Command], predKey: Int, sucKey: Int, hashToNode: Map[Int ,ActorRef[Node.Command]]) extends Command
+  // every nodes perspective
   case class set_predecessor(hashedKey: Int, currentNode: ActorRef[Node.Command]) extends Command
-  case class find_successor_attempt(replyTo: ActorRef[Node.Command], currentNodeKey: Int, currentNodeSuccessor_id: Int, hashToNode: Map[Int, ActorRef[Node.Command]]) extends Command
-  case class find_predecessor_attempt(insert_id: Int, queryType: response.Value, pred: ActorRef[Node.Command], predKey: Int, sucKey: Int) extends Command
-  case class closest_preceding_finger(id: Int, replyTo: ActorRef[Node.Command], queryType: response.Value) extends Command
-  case class closest_preceding_finger_response(id: Int) extends Command
-  case class find_successor_of(new_node_key: Int, new_node: ActorRef[Node.Command]) extends Command
-
-  case class join_1(node: ActorRef[Node.Command]) extends Command
-  case class join_2 (successorKey: Int , hashToNode: Map[Int, ActorRef[Node.Command]]) extends Command
-   // Sent from nodes who have processed the initializeNode Command.
-  case class updateFingerTable(s: ActorRef[Node.Command], i: Int) extends Command
+  // new nodes perspective
+  case class find_predecessor_attempt(insert_id: Int, queryType: response.Value, pred: ActorRef[Node.Command], predKey: Int, sucKey: Int, hashToNode: Map[Int, ActorRef[Node.Command]],  updateIndex: Int, user: ActorRef[User.Command] = null) extends Command
+  // every nodes perspective
+  case class closest_preceding_finger(id: Int, replyTo: ActorRef[Node.Command], queryType: response.Value, hashToNode: Map[Int, ActorRef[Node.Command]], updateIndex: Int, user: ActorRef[User.Command] = null) extends Command
+  // manager nodes perspective
+  case class find_successor_of(new_node_key: Int, new_node: ActorRef[Node.Command], queryType: response.Value, updateIndex: Int) extends Command
+  // new nodes perspective
+  case class join(node: ActorRef[Node.Command]) extends Command
+  // Sent from nodes who have processed the initializeNode Command.
+  case class updateFingerTable(s: ActorRef[Node.Command], s_id: Int, i: Int) extends Command
 }
 // m - bit Identifier (log base 2 of # of nodes) i.e (8 nodes yield a 3-bit modifier)
 class Node(context: ActorContext[Node.Command], key: String, value: String, m: Int, hashedKey: Int)
@@ -41,7 +43,7 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
   var hashToNode: Map[Int, ActorRef[Node.Command]] = Map.empty[Int, ActorRef[Node.Command]]
   // Initialized when the Node receives list of actors from User
   var fingerTable: Array[FingerEntry] = new Array[FingerEntry](m)
-
+  var managerNode : Option[ActorRef[Node.Command]] = None
 
   // This node adds itself to map
   //nodeToHash += context.self -> hashToKey
@@ -52,22 +54,23 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
   override def onMessage(msg: Command): Behavior[Command] = {
     msg match {
       //  Only new nodes process this command
-      case join_1(managerNode) =>
+      case join(managerNode) =>
+
         if (context.self.equals(managerNode)) // newNode is the only node in the network
           onlyNodeInNetwork()
         else                                  // else instruct manager node to find successor of this new node
-          managerNode ! find_successor_of(this.hashedKey, context.self)
-        this
+          managerNode ! find_successor_of(this.hashedKey, context.self, initTable_type, -1)
+        this.managerNode = Some(managerNode)
 
 
       //  Only manager node processes this command
-      case find_successor_of(new_node_key, new_node) =>
-        this.hashToNode += new_node_key -> new_node   // Add new node to map, for reference.
-        find_successor(new_node_key, new_node)        // find new_node's successor's hashedKey
-        this
+      case find_successor_of(new_node_key, new_node, queryType, updateIndex) =>
+        this.hashToNode += new_node_key -> new_node       // Add new node to map, for reference.
+        find_successor(new_node_key, new_node, queryType,this.hashToNode, updateIndex)        // find new_node's successor's hashedKey
+
 
       // All node perspectives'
-      case closest_preceding_finger(id, replyTo, queryType) =>
+      case closest_preceding_finger(id, replyTo, queryType, hashToNode, updateIndex, usr) =>
         // Note: Research paper says from m to 1 but (n, id) inclusive range => so exclusive range is equivalent.
         // Scan what we are looking for from farthest to closest
         val interval = Interval(this.hashedKey + 1, id - 1) // equivalent to ( n,id ) range in algorithm
@@ -75,52 +78,74 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
           val potential_closest_preceding_finger = fingerTable(i).node
           val potential_closest_id = this.fingerTable(i).getInterval.get_end
           // Found node closest to what I'm looking for
-          if (interval.contains(_id)){
+          if (interval.contains(potential_closest_id)){
             val closest_preceding_node = potential_closest_preceding_finger
             val closest_id = potential_closest_id
             if(i + 1 <= m){
               val closest_preceding_node_successor_key = this.fingerTable(i + 1).getInterval.get_end
-              replyTo ! find_predecessor_attempt(id, queryType, closest_preceding_node, closest_id, closest_preceding_node_successor_key)
+              replyTo ! find_predecessor_attempt(id, queryType, closest_preceding_node, closest_id, closest_preceding_node_successor_key, hashToNode,  updateIndex, usr)
             }
             else
-              replyTo ! find_predecessor_attempt(id, queryType, closest_preceding_node, -420, -69)
+              replyTo ! find_predecessor_attempt(id, queryType, closest_preceding_node, -420, -69, hashToNode,  updateIndex, usr)
           }
-
         }
 
-      case find_predecessor_attempt(insert_id, queryType,closest_preceding_node, closest_node_key, closest_node_successor_key) =>
+
+      case find_predecessor_attempt(insert_id, queryType,closest_preceding_node, closest_node_key, closest_node_successor_key, hashToNode,  updateIndex, usr) =>
         // Root call was from find_predecessor
         // AFTER BREAK POINT IN UPDATE OTHERS
         if (queryType ==  updateOthers_type){
           val interval = Interval(closest_node_key + 1, closest_node_successor_key)
           // When id belongs to node's successor => we found the predecessor
           if(!interval.contains(insert_id))    // Iteration of while loop in find_predecessor (algorithm)
-            closest_preceding_node ! closest_preceding_finger(insert_id, context.self, predecessor_type)
+            closest_preceding_node ! closest_preceding_finger(insert_id, context.self,  queryType, hashToNode, updateIndex)
           else {                               // else valid closest preceding node. Send update
             val i = find_index(this.hashedKey, insert_id)
             // essentially the last line in updateOther (algorithm) from the newNodes perspective
-            closest_preceding_node ! updateFingerTable(context.self, i)
+            closest_preceding_node ! updateFingerTable(context.self, this.hashedKey, i)
           }
         }
         // AFTER BREAK POINT IN INIT FINGER TABLE
-        else if (queryType == initTable_type){
-          context.self !
+        else if (queryType == initTable_type) {
+          context.self ! init_table(closest_preceding_node, closest_node_key,  closest_node_successor_key, hashToNode)
+         }
+        else if (queryType == FT_entry_update){
+          // assign that i+1 to hashNode(closest_node_successor_key)
+          fingerTable(updateIndex).setNode(hashToNode(closest_node_successor_key))
+        }
+        else if (queryType == key_response){
+          hashToNode(closest_node_successor_key) ! replyToUser(usr)
+
         }
 
-        this
+        // init_table(pred,predkey,sucKey,hashToNode)
+        //    finger[1].hashToNode = pred.find_successor(finger[1].start)
+        //    predecessor = successor.pred
+        //    successor.predecessor = hashToNode
+        //        for(i <- 1 until m-1)
+        //            if (finger(i+1).start) contains->, [hashToNode,fingerTable(i).getNode)
+        //            ??::does the above line transcribe to, if( Interval(hashToNode,fingerTable(i).getNode).contains(finger(i+1).start)
+        //
 
+      case init_table(pred, predKey, sucKey, hashToNode) =>
+        val _successor = hashToNode(sucKey)
+        // Update Finger Table Successor
+        fingerTable(1).node = _successor
+        this.predecessor = pred
+        // Setting predecessor of this node's successor
+        _successor ! set_predecessor(this.hashedKey, context.self)
+        for(i <- 1 until m){
+          val interval = new Interval(this.fingerTable(i).getStart + 1, fingerTable(i).getInterval.get_end - 1)
+          if(interval.contains(fingerTable(i + 1).getStart)){
+            fingerTable(i + 1).setNode(fingerTable(i).node)
+          }
+          // Send to ManagerNode
+          else{
+            this.managerNode.get ! find_successor_of(fingerTable(i + 1).getStart, hashToNode(fingerTable(i + 1).getStart), FT_entry_update, i+1)
+            fingerTable(i + 1).setNode(hashToNode(fingerTable(i + 1).getStart))
+          }
 
-// NOT SORTED BELOW
-      case join_2 (successor_hashedKey, hashToNode) =>
-        this.hashToNode = hashToNode
-        // now we set this (context.self) new nodes successor
-        // Next we update
-        update_others()
-        this
-
-
-
-
+        }
 
 
       // New Node inserted as predecessor in Network for this node
@@ -128,52 +153,32 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
         this.predecessor = currentNode
         hashToNode += hashedKey -> currentNode
 
-      case find_successor_attempt(replyTo, currentNodeKey, currentNodeSuccessor_id, hashToNode) =>
-        this.hashToNode = hashToNode
-        this.fingerTable(1).setNode(hashToNode(currentNodeSuccessor_id))
-        this.predecessor = hashToNode(currentNodeKey)
-        // context.self = new_node
-        hashToNode(currentNodeSuccessor_id) ! set_predecessor(this.hashedKey, context.self)
-      // s is the actor reference, but we need to add s_id to case class (s_id = hashedKey)
 
-      case updateFingerTable(s, i) =>
+
+      case updateFingerTable(s, s_id, i) =>
         val n = this.hashedKey
         hashToNode += s_id -> s
         val interval = new Interval(n, fingerTable(i).getInterval.get_end - 1)
         if (interval.contains(s_id)) {
           fingerTable(i).node = s
-          this.predecessor ! updateFingerTable(s, i)
+          this.predecessor ! updateFingerTable(s, s_id,i)
         }
-        this
 
 
-
-
-        // current node is closest lol all that scanning for nothing (get fucked kid)
-        //context.self
+      // manager node perspective
       case keyLookup(key, user) =>
-        val distance = ithFinger_start(1)
-        val interval = Interval(hashedKey + distance, nodeToHash(this.successor) + distance)
         val hash = Hash.encrypt(key, m)
-        val value = lastKeyValueReading.getOrElse(nodeToHash(this.successor), "No Key Found")
-        // Reachable
-        if (interval.contains(hash)) {
-          val closest_node = closest_preceding_finger(hash)
-          val closest_hash = nodeToHash(closest_node)
-          // Single Node
-          if(hashToKey(closest_hash) == key)
-            user ! queryResponse(key, Some(value))
-          // No Key Found must call Find Predecessor and go to that Node
-          else {
-            findPredecessor(hash) ! keyLookup(key, user)
-          }
-        }
-        // Found Key (More than One Node)
-        else
+        // Found Key
+        if (this.hashedKey == hash)
           user ! queryResponse(key, Some(value))
-        this
-    }
+        else
+          find_successor(hash, context.self, key_response, null, -1, user)
 
+      case replyToUser(user) =>
+        user ! queryResponse(this.key, Some(this.value))
+    }
+    this
+    // END OF ON_MESSAGE
   }
   override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
     case PostStop =>
@@ -192,40 +197,31 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
 
 
     // Purpose_1: find predecessor of node (hashKey = id)
-    def find_predecessor(id: Int): Unit = {
+    def find_predecessor(id: Int, replyTo: ActorRef[Node.Command ], queryType: response.Value, hashToNode: Map[Int, ActorRef[Node.Command]], updateIndex: Int = -1, user: ActorRef[User.Command] = null): Unit = {
       val interval = Interval(this.hashedKey + 1, this.successor)
       if(!interval.contains(id)){ // start 'While loop' conversation
-        context.self ! closest_preceding_finger(id, context.self,  updateOthers_type)
+        context.self ! closest_preceding_finger(id, context.self,  updateOthers_type, hashToNode, updateIndex, user)
       }
       else                         // 'While loop' conversation never executed
-        context.self ! find_predecessor_attempt(id, updateOthers_type,context.self, this.hashedKey, this.successor)
+        context.self ! find_predecessor_attempt(id, updateOthers_type,context.self, this.hashedKey, this.successor, hashToNode, updateIndex )
     }
 
 
     // Purpose_1: kick-starts conversation to find new nodes successor OR
     // Purpose_2: kick-starts conversation to find a node's (with hashKey being id) successor
     // replyTo is node that made query to manager node (so far seen cases: its been newNode)
-    def find_successor(id: Int, replyTo: ActorRef[Node.Command ]): Unit = {     // manager node perspective
-      // First iteration of while loop in find_predecessor (because find_successor calls find_predecessor)
-      val interval = Interval(this.hashedKey + 1, this.successor)
-
-      if(!interval.contains(id)){ // start 'While loop' conversation
-        context.self ! closest_preceding_finger(id, replyTo, successor_type)
-      }
-      else                        // 'While loop' conversation never executed
-        replyTo ! find_successor_attempt() //TODO
+    def find_successor(id: Int, replyTo: ActorRef[Node.Command ], queryType: response.Value, hashToNode: Map[Int, ActorRef[Node.Command]] = null, updateIndex: Int = -1, user: ActorRef[User.Command] = null): Unit = {     // manager node perspective
+      // calls find_predecessor like in algorithm
+      find_predecessor(id, replyTo, queryType, hashToNode, updateIndex)
     }
 
 
 
   // NOT SORTED BELOW
-
-
   def update_others(): Unit = {
     for(i <- 1 to m){
       val distance = ithFinger_start(i - 1)
-      val p = findPredecessor(this.hashedKey - distance)
-      p ! updateFingerTable(context.self, this.hashedKey, i)
+      find_predecessor(this.hashedKey - distance, context.self, updateOthers_type, hashToNode)
     }
   }
   //*update all nodes whose finger
@@ -242,38 +238,11 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
   // Used in Find Predecessor to avoid passing i from closest_preceeding_finger
   def find_index(a: Int, b: Int): Int =
     1 + (Math.log(a - b) / Math.log(2)).toInt
-  def initFingerTable(): Unit = {
-    // TODO BIG: Question: the first node has m = 0, this loop therefore does not execute, part of algorithm?
-    // Or does the next node construction tell this node to update? If so where do you send this node ref to other nodes? and where in the code
-    // do other nodes send updates to this node?
-    for(i <- 1 until m){
-      val start = ithFinger_start(i)
-      fingerTable(i) = new FingerEntry(start, Interval(start, ithFinger_start(i + 1)), context.self)
-    }
-    // Set predecessor to self
-    predecessor = context.self
-  }
-
-
-  def init_finger_table(id: Int): Unit = {
-    for(i <- 1 until m){
-      val interval = Interval(this.hashedKey, fingerTable(i).getInterval.get_end - 1)
-      if(interval.contains(fingerTable(i + 1).getStart))
-        fingerTable(i + 1).setNode(fingerTable(i).node)
-      else {
-        val index = fingerTable(i + 1).getStart
-        fingerTable(i + 1).node ! find_successor(index, i)
-      }
-    }
-
-    }
-
 
 
   // By definition the first entry is the successor
   def successor: Int =
     this.fingerTable(1).getInterval.get_end
-
 
 }
 
