@@ -63,7 +63,7 @@ of natural load balance.
 The consistent hash location function assigns each node and key an m-bit identifier using a base hash function SHA-1 found under `hash` file
 
 
-A node’s identifier is chosen by hashing the node’s (movie name) key, while which refers to the value in the key resulting (year,$revenue)
+* A node’s identifier is chosen by hashing the node’s (movie name) key, while which refers to the value in the key resulting (year,$revenue)
 
 
 `Decentralization:` 
