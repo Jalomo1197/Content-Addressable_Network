@@ -1,4 +1,4 @@
-package Chord
+package Chord_Algo
 
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.actor.typed.scaladsl.AbstractBehavior
@@ -99,9 +99,13 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
         if (queryType ==  updateOthers_type){
           val interval = Interval(closest_node_key + 1, closest_node_successor_key)
           // When id belongs to node's successor => we found the predecessor
-          if(!interval.contains(insert_id))    // Iteration of while loop in find_predecessor (algorithm)
-            closest_preceding_node ! closest_preceding_finger(insert_id, context.self,  queryType, hashToNode, updateIndex)
+          if(!interval.contains(insert_id)) { // Iteration of while loop in find_predecessor (algorithm)
+            context.log.info("New Node: " +context.self.path.name + " predecessor not found. Now asking node: " + closest_preceding_node.path.name )
+            closest_preceding_node ! closest_preceding_finger(insert_id, context.self, queryType, hashToNode, updateIndex)
+          }
           else {                               // else valid closest preceding node. Send update
+            context.log.info("New Node: " + context.self.path.name + " found predecessor.")
+            context.log.info("New Node: " + context.self.path.name + " is sending predecessor: "+ closest_preceding_node.path.name + " update finger table command")
             val i = find_index(this.hashedKey, insert_id)
             // essentially the last line in updateOther (algorithm) from the newNodes perspective
             closest_preceding_node ! updateFingerTable(context.self, this.hashedKey, i)
@@ -109,6 +113,7 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
         }
         // AFTER BREAK POINT IN INIT FINGER TABLE
         else if (queryType == initTable_type) {
+          context.log.info("New Node: " + context.self.path.name + " knows predecessor ("+closest_preceding_node.path.name+") and successor("+hashToNode(closest_node_successor_key).path.name+")")
           context.self ! init_table(closest_preceding_node, closest_node_key,  closest_node_successor_key, hashToNode)
          }
         else if (queryType == FT_entry_update){
@@ -120,19 +125,12 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
 
         }
 
-        // init_table(pred,predkey,sucKey,hashToNode)
-        //    finger[1].hashToNode = pred.find_successor(finger[1].start)
-        //    predecessor = successor.pred
-        //    successor.predecessor = hashToNode
-        //        for(i <- 1 until m-1)
-        //            if (finger(i+1).start) contains->, [hashToNode,fingerTable(i).getNode)
-        //            ??::does the above line transcribe to, if( Interval(hashToNode,fingerTable(i).getNode).contains(finger(i+1).start)
-        //
 
       case init_table(pred, predKey, sucKey, hashToNode) =>
         val _successor = hashToNode(sucKey)
         // Update Finger Table Successor
         fingerTable(1).node = _successor
+        fingerTable(1).getInterval.set_end(sucKey)
         this.predecessor = pred
         // Setting predecessor of this node's successor
         _successor ! set_predecessor(this.hashedKey, context.self)
@@ -163,6 +161,7 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
         val interval = new Interval(n, fingerTable(i).getInterval.get_end - 1)
         if (interval.contains(s_id)) {
           fingerTable(i).node = s
+          context.log.info("Node: " + context.self.path.name + " is sending predecessor: "+ this.predecessor.path.name + " update finger table command")
           this.predecessor ! updateFingerTable(s, s_id,i)
         }
 
@@ -200,12 +199,14 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
 
     // Purpose_1: find predecessor of node (hashKey = id)
     def find_predecessor(id: Int, replyTo: ActorRef[Node.Command ], queryType: response.Value, hashToNode: Map[Int, ActorRef[Node.Command]], updateIndex: Int = -1, user: ActorRef[User.Command] = null): Unit = {
+      context.log.info("Node:"+context.self.path.name+" attempting to find predecessor of Node: " + id + " Query Type: " + queryType)
       val interval = Interval(this.hashedKey + 1, this.successor)
+      context.log.info(" interval " +this.hashedKey +" " + this.successor)
       if(!interval.contains(id)){ // start 'While loop' conversation
-        context.self ! closest_preceding_finger(id, context.self,  updateOthers_type, hashToNode, updateIndex, user)
+        replyTo ! closest_preceding_finger(id, replyTo,  queryType, hashToNode, updateIndex, user)
       }
       else                         // 'While loop' conversation never executed
-        context.self ! find_predecessor_attempt(id, updateOthers_type,context.self, this.hashedKey, this.successor, hashToNode, updateIndex )
+        context.self ! find_predecessor_attempt(id, queryType,replyTo, this.hashedKey, this.successor, hashToNode, updateIndex, user )
     }
 
 
@@ -213,10 +214,9 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
     // Purpose_2: kick-starts conversation to find a node's (with hashKey being id) successor
     // replyTo is node that made query to manager node (so far seen cases: its been newNode)
     def find_successor(id: Int, replyTo: ActorRef[Node.Command ], queryType: response.Value, hashToNode: Map[Int, ActorRef[Node.Command]] = null, updateIndex: Int = -1, user: ActorRef[User.Command] = null): Unit = {     // manager node perspective
-      // calls find_predecessor like in algorithm
-      find_predecessor(id, replyTo, queryType, hashToNode, updateIndex)
+      context.log.info("Manager Node:"+ context.self.path.name +" attempting to find successor of Node: " + id + " Query Type: " + queryType)
+      find_predecessor(id, replyTo, queryType, hashToNode, updateIndex, user) // calls find_predecessor like in algorithm
     }
-
 
 
   // NOT SORTED BELOW
@@ -237,14 +237,13 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
     val distance = Math.pow(2, i).toInt
     (hashedKey + distance) % max
   }
+
   // Used in Find Predecessor to avoid passing i from closest_preceeding_finger
   def find_index(a: Int, b: Int): Int =
     1 + (Math.log(a - b) / Math.log(2)).toInt
-
 
   // By definition the first entry is the successor
   def successor: Int =
     this.fingerTable(1).getInterval.get_end
 
 }
-

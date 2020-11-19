@@ -1,4 +1,4 @@
-package Chord
+package Chord_Algo
 
 import java.security.MessageDigest
 import java.math.BigInteger

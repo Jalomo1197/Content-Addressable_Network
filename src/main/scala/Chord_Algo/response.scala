@@ -1,4 +1,4 @@
-package Chord
+package Chord_Algo
 
 object response extends Enumeration {
   type response = Value
