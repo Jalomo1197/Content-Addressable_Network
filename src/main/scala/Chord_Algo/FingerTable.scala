@@ -11,7 +11,7 @@ object FingerTable{
 
 class FingerTable(n: Int, m: Int) {
   var finger: Array[FingerEntry] = newFingerTable()
-  var hashedKey: Int = 0
+
 
 
   /*
