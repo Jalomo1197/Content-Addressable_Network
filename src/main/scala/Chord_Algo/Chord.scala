@@ -56,6 +56,7 @@ class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord
       case initializeNodesWithConfig(config, replyTo) =>
         // Creating dictionary defined in config file: application.conf
         dictionary = config.as[Map[String, String]]("dictionary")
+        ip = config.as[List[String]]("IP_address")
         // Calculating m bit identifier
         val m: Int = (Math.log(dictionary.size) / Math.log(2)).toInt
         // For each entry created a Node Actor and append to map

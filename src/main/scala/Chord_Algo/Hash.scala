@@ -23,6 +23,12 @@ object Hash {
     hashCode = hashCode & mask
     hashCode
   }
+  // movieTitles => m-bit hash value (unsigned)
+  def m_bit_hash(movieTitles: String, m: Int): Int = {
+    val md = java.security.MessageDigest.getInstance("SHA-1").digest(movieTitles.getBytes("UTF-8"))
+    val m_bit_hash = Int(md, 16).toString(2).take(m)
+    Integer.parseInt(m_bit_hash, 2)
+  }
 }
 object test extends App{
   val david = Hash.getHash("David")
