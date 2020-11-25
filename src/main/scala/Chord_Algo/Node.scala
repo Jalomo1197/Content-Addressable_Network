@@ -5,6 +5,7 @@ import akka.actor.typed.scaladsl.AbstractBehavior
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.Behaviors
 import response.{FT_entry_update, initTable_type, predecessor_type, successor_type, updateOthers_type, key_response}
+import scala.math.pow
 
 object Node {
   def apply(key: String, value: String, m: Int, hashedKey: Int): Behavior[Command] = {
@@ -41,9 +42,10 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
   val max: Int = math.pow(2, m).toInt
   var nodeToHash: Map[ActorRef[Node.Command], Int] = Map.empty[ActorRef[Node.Command], Int]
   var hashToNode: Map[Int, ActorRef[Node.Command]] = Map.empty[Int, ActorRef[Node.Command]]
-  // Initialized when the Node receives list of actors from User
-  var fingerTable: Array[FingerEntry] = new Array[FingerEntry](m + 1)
-  fingerTable.foreach(finger =>  new FingerEntry(0, null, null))
+  // Initialized finger table columns: START and Interval
+//  var fingerTable: Array[FingerEntry] = newFingerTable()
+  var fingerTable: FingerTable = FingerTable(hashedKey, m)
+
   var managerNode : Option[ActorRef[Node.Command]] = None
 
   // This node adds itself to map
@@ -58,7 +60,8 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
       case join(managerNode) =>
         context.log.info("New Node: ("+ key + ", " + value + ") requesting join" )
         if (context.self.equals(managerNode)) // newNode is the only node in the network
-          onlyNodeInNetwork()
+          fingerTable.initializeNodeColumn(context.self)
+          /* predecessor = context.self above in constructor */
         else                                  // else instruct manager node to find successor of this new node
           managerNode ! find_successor_of(this.hashedKey, context.self, initTable_type, -1)
         context.log.info("Node: ("+ key + ", " + value + ") has reference to manager node")
@@ -159,6 +162,10 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
         val n = this.hashedKey
         hashToNode += s_id -> s
         val interval = new Interval(n, fingerTable(i).getInterval.get_end - 1)
+        // Set the interval for the ith Entry
+        fingerTable(i).setInterval(interval)
+        // DEBUGGING
+        context.log.info("Interval for NodeID: " + n.toString + "\n" + fingerTable(i).printInterval)
         if (interval.contains(s_id)) {
           fingerTable(i).node = s
           context.log.info("Node: " + context.self.path.name + " is sending predecessor: "+ this.predecessor.path.name + " update finger table command")
@@ -188,11 +195,28 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
 /* ***************************************************************************************************************
 *               Functions for local changes and/or kick starting conversation for query answer
 * ***************************************************************************************************************/
+    def newFingerTable(): Array[FingerEntry] ={
+      var fingerTable: Array[FingerEntry] = new Array[FingerEntry](m + 1)
+      // successor/node field is set by join
+      for (i <- 1 to m){
+        val start =  calculateStart(i)
+        fingerTable(i) = new FingerEntry(start, Interval(start, calculateStart(i + 1)), null)
+      }
+      context.log.info("Node: "+ this.hashedKey + " Finger Table Created")
+      fingerTable
+    }
+
+/*
+* A node’s identifier is chosen by hashing the node’s IP address,
+* while a key identifier is produced by hashing the key
+* */
+    def calculateStart(index: Int): Int = ( this.hashedKey + scala.math.pow(2, index - 1).toInt ) % pow(2, m).toInt
+
     // Purpose: Changes made to this nodes finger table
     def onlyNodeInNetwork(): Unit = {                                           // new node perspective
-      context.log.info("First node in network up and running")
+      context.log.info("First Node In Network. Column: FingerTable::Node Set To First Node ")
       for (i <- 1 to m) {
-        this.fingerTable(i) = new FingerEntry(hashedKey,new Interval(hashedKey, hashedKey),context.self)
+        this.fingerTable(i).setNode(context.self)
       }
     }
 
@@ -203,10 +227,10 @@ class Node(context: ActorContext[Node.Command], key: String, value: String, m: I
       val interval = Interval(this.hashedKey + 1, this.successor)
       context.log.info(" interval " +this.hashedKey +" " + this.successor)
       if(!interval.contains(id)){ // start 'While loop' conversation
-        replyTo ! closest_preceding_finger(id, replyTo,  queryType, hashToNode, updateIndex, user)
+        context.self ! closest_preceding_finger(id, replyTo,  queryType, hashToNode, updateIndex, user)
       }
       else                         // 'While loop' conversation never executed
-        context.self ! find_predecessor_attempt(id, queryType,replyTo, this.hashedKey, this.successor, hashToNode, updateIndex, user )
+        replyTo ! find_predecessor_attempt(id, queryType,replyTo, this.hashedKey, this.successor, hashToNode, updateIndex, user )
     }
 
 
