@@ -38,7 +38,8 @@ object Chord{
 class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord.Command](context) {
   // For immediate access to case classes
   import Chord._
-
+  var ip_list: List[String] = List.empty[String]
+  var servers: Map[Int, String] = Map.empty[Int, String]
   var dictionary: Map[String, String] = Map.empty[String, String]
   // Map for Node Actors. accessed by NodeID which is the hashed key
   private var nodes = Map.empty[Int, ActorRef[Node.Command]]
@@ -56,9 +57,16 @@ class Chord(context: ActorContext[Chord.Command]) extends AbstractBehavior[Chord
       case initializeNodesWithConfig(config, replyTo) =>
         // Creating dictionary defined in config file: application.conf
         dictionary = config.as[Map[String, String]]("dictionary")
-        ip = config.as[List[String]]("IP_address")
+        // Creating list of IP addresses defined in config file
+        ip_list = config.as[List[String]]("IP_address")
         // Calculating m bit identifier
         val m: Int = (Math.log(dictionary.size) / Math.log(2)).toInt
+        // Compute m-bit identifier for each IP_address
+        ip_list.foreach(ip => {
+          // Creating the hashed key
+          val hashedKey: Int = Hash.encrypt(ip,m)
+          servers += hashedKey -> ip
+        })
         // For each entry created a Node Actor and append to map
         dictionary.foreach( entry => {
           // Creating the hashed key
