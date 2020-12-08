@@ -7,7 +7,7 @@ import com.typesafe.config.ConfigFactory
 
 object Zone{
   val m: Int = ConfigFactory.load("application.conf").getInt("matrix_size")
-  var neighbors: List[Zone] = List.empty[Zone]
+  var neighbors: Neighbors = new Neighbors()
 
   def apply(X_range: (Double , Double), Y_range: (Double , Double)): Zone = new Zone(X_range, Y_range)
 
