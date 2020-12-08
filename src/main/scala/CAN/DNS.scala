@@ -8,7 +8,7 @@ object DNS{
   def apply(): Behavior[Command] = Behaviors.setup(context => new DNS(context))
 
   trait Command
-  case class bootstrap(p: Procedure[ActorRef[Node.Command]]) extends Command
+  case class bootstrap(p: Procedure[Node.Command]) extends Command
 }
 
 class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Command](context) {
