@@ -36,24 +36,6 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
         p.getReplyTo.get ! acquiredNodeInNetwork(Procedure[Node.Command]().withReference(active_nodes.head))
         this
     }
-  msg match {
-    case initializeZones =>
-      initializeNeighbors()
-      this.zone_count += 4
-      this
-    case getNodeInNetwork(p) =>
-      // Randomly choose node from bootstrap node
-      val node: Node.Command = getRandomNode(active_nodes, new Random())
-      /*
-      *   Contact DNS
-      *   Bootstrap reply
-      *   Query bootstrap to get random node
-      *
-      * */
-      // Choose point P of identifier for new Node
-
-      this
-  }
   }
 
   def initializeNeighbors():Unit = {
