@@ -25,7 +25,6 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
   // Assign Neighbors
 
   override def onMessage(msg: Bootstrap.Command): Behavior[Bootstrap.Command] = {
-<<<<<<< HEAD
     msg match {
       case initializeZones =>
         initializeNeighbors()
@@ -37,7 +36,6 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
         p.getReplyTo.get ! acquiredNodeInNetwork(Procedure[Node.Command]().withReference(active_nodes.head))
         this
     }
-=======
   msg match {
     case initializeZones =>
       initializeNeighbors()
@@ -56,9 +54,7 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
 
       this
   }
->>>>>>> routing
   }
-
 
   def initializeNeighbors():Unit = {
     import Node.{setZone,initializeNeighbors}
@@ -82,10 +78,6 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
     //zone3.set_neighbors(List(zone, zone4))
     //zone4.set_neighbors(List(zone2, zone3))
   }
-<<<<<<< HEAD
-
-=======
->>>>>>> routing
   def getRandomNode[A](seq: Seq[A], random: Random): A =
     seq(random.nextInt(seq.length))
 }
