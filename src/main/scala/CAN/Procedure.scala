@@ -3,9 +3,9 @@ package CAN
 import akka.actor.typed.ActorRef
 
 object Procedure{
-  def apply(R: ActorRef[Node.Command]): Procedure = new Procedure(R)
+  def apply[T](R: ActorRef[T]): Procedure[T] = new Procedure(R)
 }
 
-class Procedure(replyTo: ActorRef[Node.Command]) {
-
+class Procedure[T](replyTo: ActorRef[T]) {
+  def getReplyTo: ActorRef[T] = replyTo
 }
