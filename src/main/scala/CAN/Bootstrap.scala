@@ -64,7 +64,7 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
     for(i <- 0 until 4){
       val new_node = context.spawn(Node(),s"CAN-node-$i")
       active_nodes +:= new_node
-      new_node ! setZone(initialZones(i))
+      new_node ! setZone(Procedure[Node.Command]().withZone(initialZones(i)))
     }
 
     active_nodes.foreach(node => {

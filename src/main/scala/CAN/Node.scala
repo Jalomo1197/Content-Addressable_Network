@@ -7,14 +7,19 @@ object Node{
   def apply():  Behavior[Command] = Behaviors.setup(context => new Node(context))
 
   trait Command
+  // Reply from DNS, providing a bootstrap node
   case class acquiredBootstrap(p: Procedure[Bootstrap.Command]) extends Command
+  // Reply from a bootstrap node, providing an exist CAN node
   case class acquiredNodeInNetwork(p: Procedure[Node.Command]) extends Command
-
+  // Query for this node's zone, must reply
   case class getZone(p: Procedure[Node.Command]) extends Command
-  case class setZone(z: Zone) extends Command
+  // Command to set node's zone
+  case class setZone(p: Procedure[Node.Command]) extends Command
+  // Command to set a neighbor if valid zone
   case class setNeighbor(p: Procedure[Node.Command]) extends Command
+  // For setup of the initial 4 nodes
   case class initializeNeighbors(n: List[ActorRef[Node.Command]]) extends Command
-
+  // Beginning of routing to find zone
   case class findZone(p: Procedure[Node.Command]) extends Command
 }
 
@@ -31,8 +36,8 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
     case acquiredNodeInNetwork(p) =>
       p.getReplyTo.get ! findZone(Procedure[Node.Command]().withReference(context.self).withZone(zone))
 
-    case setZone(z) =>
-      zone = z
+    case setZone(p) =>
+      zone = p.getZone.get
 
     case initializeNeighbors(nodes) =>
       nodes.foreach(n  => n ! getZone(Procedure[Node.Command]().withReference(context.self)))
