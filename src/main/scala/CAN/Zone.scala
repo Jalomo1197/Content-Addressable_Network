@@ -6,7 +6,7 @@ import Chord_Algo.Hash
 import akka.actor.typed.ActorRef
 import com.typesafe.config.ConfigFactory
 
-object Zone{
+object Zone extends direction {
   val m: Int = ConfigFactory.load("application.conf").getInt("matrix_size")
   var neighborTable: Neighbors = Neighbors()
 
@@ -45,7 +45,7 @@ class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
       direction = right
     else if(X_axis == x && Y_axis._1 == y._2 && Y_axis._2 > y._2)
       direction = up
-    else
+    else if(X_axis == x && Y_axis._1 > y._2 && Y_axis._2 == y._2)
       direction = down
     // Set Up Entry
     if(direction == up || direction == down) {
@@ -59,4 +59,9 @@ class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
       else neighborTable.neighbors(2) = entry
     }
   }
+}
+
+object direction extends Enumeration {
+  type direction = Value
+  val left, up, right, down = Value
 }
