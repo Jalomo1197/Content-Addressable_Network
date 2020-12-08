@@ -13,15 +13,16 @@ object DNS{
 
 class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Command](context) {
   import DNS.bootstrap
-  import Node.acquireBootstrap
+  import Node.acquiredBootstrap
   import Bootstrap.initializeZones
   var boots = 1
   var bootstraps: List[ActorRef[Bootstrap.Command]] = List(context.spawn(Bootstrap(), s"node-bootstrap-$boots"))
   bootstraps.head ! initializeZones
 
   override def onMessage(msg: DNS.Command): Behavior[DNS.Command] = {
+
     case bootstrap(procedure) =>
-      procedure.getReplyTo.get ! acquireBootstrap(Procedure[Bootstrap.Command]().withReply(bootstraps.head))
+      procedure.getReplyTo.get ! acquiredBootstrap(Procedure[Bootstrap.Command]().withReference(bootstraps.head))
 
     this
   }

@@ -11,7 +11,7 @@ class Procedure[T] {
   private var zone: Option[Zone] = None
   private var replyTo: Option[ActorRef[T]] = None
 
-  def withReply(r: ActorRef[T]): Procedure[T] = {
+  def withReference(r: ActorRef[T]): Procedure[T] = {
     replyTo = Some(r)
     this
   }

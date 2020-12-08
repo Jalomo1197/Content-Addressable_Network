@@ -1,5 +1,6 @@
 package CAN
 
+
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 
@@ -14,6 +15,7 @@ object Bootstrap{
 
 class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavior[Bootstrap.Command](context){
   import Bootstrap._
+  import Node.acquiredNodeInNetwork
 
   var zone_count = 0
   var active_nodes: List[ActorRef[Node.Command]] = List.empty[ActorRef[Node.Command]]
@@ -27,6 +29,7 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
         this.zone_count += 4
         this
       case getNodeInNetwork(p) =>
+        p.getReplyTo.get ! acquiredNodeInNetwork(Procedure[Node.Command]().withReference(active_nodes.head))
         this
     }
   }
