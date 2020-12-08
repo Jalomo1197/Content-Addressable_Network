@@ -8,7 +8,7 @@ object Bootstrap{
 
   trait Command
 
-  final case class initializeZones() extends Command
+  final case object initializeZones extends Command
 }
 
 class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavior[Bootstrap.Command](context){
@@ -17,7 +17,7 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
   var zone_count = 0
   override def onMessage(msg: Bootstrap.Command): Behavior[Bootstrap.Command] =
   msg match {
-    case initializeZones() =>
+    case initializeZones =>
       val zone = Zone((0, 7), (0, 7))
       val zone2 = Zone((7, 15), (0, 7))
       val zone3 = Zone((0, 7), (7, 15))
