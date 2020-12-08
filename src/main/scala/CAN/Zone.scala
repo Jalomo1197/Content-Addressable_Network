@@ -6,7 +6,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 object Zone{
   val m: Int = ConfigFactory.load("application.conf").getInt("matrix_size")
 
-  def apply(X_range: (Double , Double), Y_range: (Double , Double)): Zone = new Zone(X, Y)
+  def apply(X_range: (Double , Double), Y_range: (Double , Double)): Zone = new Zone(X_range, Y_range)
 
 
   def findLocation(movieTitle: String): (Double, Double) = {
