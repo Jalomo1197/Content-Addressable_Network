@@ -4,6 +4,8 @@ package CAN
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 
+import scala.util.Random
+
 object Bootstrap{
   def apply():  Behavior[Command] = Behaviors.setup(context => new Bootstrap(context))
 
@@ -29,6 +31,8 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
         this.zone_count += 4
         this
       case getNodeInNetwork(p) =>
+        // Randomly choose node from bootstrap node
+        val node = getRandomNode(active_nodes, new Random())
         p.getReplyTo.get ! acquiredNodeInNetwork(Procedure[Node.Command]().withReference(active_nodes.head))
         this
     }
@@ -58,6 +62,7 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
     //zone4.set_neighbors(List(zone2, zone3))
   }
 
-
+  def getRandomNode[A](seq: Seq[A], random: Random): A =
+    seq(random.nextInt(seq.length))
 }
 
