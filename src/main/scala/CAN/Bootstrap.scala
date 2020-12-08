@@ -1,6 +1,6 @@
 package CAN
 
-import akka.actor.typed.Behavior
+import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 
 object Bootstrap{
@@ -16,34 +16,43 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
   import Bootstrap._
 
   var zone_count = 0
-  var active_nodes: List[Node.Command] = List.empty[Node.Command]
+  var active_nodes: List[ActorRef[Node.Command]] = List.empty[ActorRef[Node.Command]]
   // Assign Zones
   // Assign Neighbors
 
   override def onMessage(msg: Bootstrap.Command): Behavior[Bootstrap.Command] = {
-  msg match {
-    case initializeZones =>
-      initializeNeighbors()
-      this.zone_count += 4
-      this
-    case getNodeInNetwork(p) =>
-      this
+    msg match {
+      case initializeZones =>
+        initializeNeighbors()
+        this.zone_count += 4
+        this
+      case getNodeInNetwork(p) =>
+        this
+    }
   }
-  }
+
+
   def initializeNeighbors():Unit = {
+    import Node.{setZone,initializeNeighbors}
+    var initialZones = List( Zone((0, 7), (0, 7)) , Zone((7, 15), (0, 7)), Zone((0, 7), (7, 15)), Zone((7, 15), (7, 15)))
+
     /* Spawn New Nodes */
     for(i <- 0 until 4){
-      val new_node = context.spawn(, )
+      val new_node = context.spawn(Node(),s"CAN-node-$i")
+      active_nodes +:= new_node
+      new_node ! setZone(initialZones(i))
     }
-    val zone = Zone((0, 7), (0, 7))
-    val zone2 = Zone((7, 15), (0, 7))
-    val zone3 = Zone((0, 7), (7, 15))
-    val zone4 = Zone((7, 15), (7, 15))
+
+    active_nodes.foreach(node => {
+      node ! initializeNeighbors(active_nodes)
+    })
+
+
     /* Zones must acknowledge each other as neighbors */
-    zone.set_neighbors(List(zone2, zone3))
-    zone2.set_neighbors(List(zone, zone4))
-    zone3.set_neighbors(List(zone, zone4))
-    zone4.set_neighbors(List(zone2, zone3))
+    //zone.set_neighbors(List(zone2, zone3))
+    //zone2.set_neighbors(List(zone, zone4))
+    //zone3.set_neighbors(List(zone, zone4))
+    //zone4.set_neighbors(List(zone2, zone3))
   }
 
 

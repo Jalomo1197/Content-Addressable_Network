@@ -21,7 +21,7 @@ class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Comma
 
   override def onMessage(msg: DNS.Command): Behavior[DNS.Command] = {
     case bootstrap(procedure) =>
-      procedure.getReplyTo ! acquireBootstrap(Procedure[Bootstrap.Command](bootstraps.head))
+      procedure.getReplyTo.get ! acquireBootstrap(Procedure[Bootstrap.Command]().withReply(bootstraps.head))
 
     this
   }
