@@ -6,6 +6,14 @@ object Neighbors{
   def apply(): Neighbors = new Neighbors()
 }
 class Neighbors {
+  /*
+  *   Entry | Direction
+  *     0   | Left
+  *     1   | Up
+  *     2   | Right
+  *     3   | Down
+  *
+  */
   var neighbors: Array[Neighbor] = newNeighborTable()
 
   def newNeighborTable(): Array[Neighbor] = {
