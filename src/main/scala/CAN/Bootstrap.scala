@@ -9,6 +9,7 @@ object Bootstrap{
   trait Command
 
   final case object initializeZones extends Command
+  case class getNodeInNetwork(p: Procedure[Node.Command]) extends Command
 }
 
 class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavior[Bootstrap.Command](context){
@@ -28,6 +29,11 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
       zone3.set_neighbors(List(zone, zone4))
       zone4.set_neighbors(List(zone2, zone3))
       this.zone_count += 4
+    case getNodeInNetwork(p) =>
+
+
+
+
       this
   }
 }
