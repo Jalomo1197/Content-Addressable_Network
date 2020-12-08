@@ -9,10 +9,13 @@ object Node{
   trait Command
   case class acquiredBootstrap(p: Procedure[Bootstrap.Command]) extends Command
   case class acquiredNodeInNetwork(p: Procedure[Node.Command]) extends Command
+
   case class getZone(p: Procedure[Node.Command]) extends Command
   case class setZone(z: Zone) extends Command
   case class setNeighbor(p: Procedure[Node.Command]) extends Command
   case class initializeNeighbors(n: List[ActorRef[Node.Command]]) extends Command
+
+  case class findZone(p: Procedure[Node.Command]) extends Command
 }
 
 class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Command](context){
@@ -26,7 +29,7 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
       p.getReplyTo.get ! getNodeInNetwork(Procedure[Node.Command]().withReference(context.self))
 
     case acquiredNodeInNetwork(p) =>
-      p.getReplyTo.get ! ???
+      p.getReplyTo.get ! findZone(Procedure[Node.Command]().withReference(context.self).withZone(zone))
 
     case setZone(z) =>
       zone = z
@@ -39,6 +42,8 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
 
     case setNeighbor(p) =>
       zone.set_neighbor(p.getNeighbor.get, p.getZone.get)
+
+    case findZone(p) => ???
 
     this
   }
