@@ -1,13 +1,13 @@
 package CAN
 
-import CAN.Zone.neighbors
+import CAN.Zone.neighborTable
 import Chord_Algo.Hash
 import akka.actor.typed.ActorRef
 import com.typesafe.config.ConfigFactory
 
 object Zone{
   val m: Int = ConfigFactory.load("application.conf").getInt("matrix_size")
-  var neighbors: Neighbors = new Neighbors()
+  var neighborTable: Neighbors = Neighbors()
 
   def apply(X_range: (Double , Double), Y_range: (Double , Double)): Zone = new Zone(X_range, Y_range)
 
@@ -28,12 +28,6 @@ class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
   def splitZone(new_node: ActorRef[Node.Command]): Unit = {
 
   }
-  // ActorRef => (x, y)
-  def set_neighbors(zone: Zone): Unit =
-    neighbors = zone :: neighbors
-
-  def set_neighbors(zones: List[Zone]): Unit =
-    neighbors = zones
-
-  // Valid neighbor if (d - 1) overlap
+  def set_neighbors(entry: Neighbor, i: Int): Unit =
+    neighborTable.neighbors(i) = entry
 }
