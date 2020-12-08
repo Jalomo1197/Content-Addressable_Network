@@ -12,6 +12,7 @@ object Hash {
     val hashedString = bigInt.toString(16)
     hashedString
   }
+  // movieTitles => m-bit hash value (unsigned)
   def encrypt(hash: String, m: Int): Int = {
     val md = MessageDigest.getInstance("SHA-1")
     val key = md.digest(hash.getBytes("UTF-8"))
@@ -23,6 +24,7 @@ object Hash {
     hashCode = hashCode & mask
     hashCode
   }
+
 }
 object test extends App{
   val david = Hash.getHash("David")
