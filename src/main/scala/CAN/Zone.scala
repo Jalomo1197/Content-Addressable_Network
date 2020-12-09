@@ -1,12 +1,14 @@
 package CAN
 
-import CAN.Zone.neighborTable
-import CAN.direction.{direction, left, up, right, down}
+import CAN.Zone.{left, right, up, down, neighborTable}
 import Chord_Algo.Hash
 import akka.actor.typed.ActorRef
 import com.typesafe.config.ConfigFactory
 
-object Zone extends direction {
+object Zone extends Enumeration {
+  type direction = Value
+  val left, up, right, down = Value
+
   val m: Int = ConfigFactory.load("application.conf").getInt("matrix_size")
   var neighborTable: Neighbors = Neighbors()
 
@@ -20,12 +22,22 @@ object Zone extends direction {
     val Y: Double = Hash.encrypt(second_half, 8) % m
     (X,Y)
   }
+
+
 }
 
 class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
   def get_XRange: (Double , Double) = X_range
   def get_YRange: (Double , Double) = Y_range
 
+  def containsP(P: (Double, Double)): Boolean = {
+    val x_range = get_XRange
+    val y_range = get_YRange
+    P._1 >= x_range._1 && P._1 <= x_range._2 && P._2 >= y_range._1 && P._2 <= y_range._2
+  }
+  def identifyNeighborToPointP(P: (Double, Double)): Neighbor = {
+    
+  }
   def splitZone(new_node: ActorRef[Node.Command]): Unit = {
 
   }
@@ -34,7 +46,7 @@ class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
     val Y_axis = zone.get_YRange
     val x = this.get_XRange
     val y = this.get_YRange
-    var direction: direction = left
+    var direction = left
     var entry = Neighbor(node, (0, 0), direction)
     // Same Zone
     if(x == X_axis && y == Y_axis) return
@@ -59,9 +71,4 @@ class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
       else neighborTable.neighbors(2) = entry
     }
   }
-}
-
-object direction extends Enumeration {
-  type direction = Value
-  val left, up, right, down = Value
 }
