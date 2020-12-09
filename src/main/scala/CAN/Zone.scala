@@ -36,8 +36,30 @@ class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
     P._1 >= x_range._1 && P._1 <= x_range._2 && P._2 >= y_range._1 && P._2 <= y_range._2
   }
   def identifyNeighborToPointP(P: (Double, Double)): Neighbor = {
-    
+    // Four Corners
+    val top_left: (Double, Double) = (get_XRange._1, get_YRange._2)
+    val top_right: (Double, Double) = (get_XRange._2, get_YRange._2)
+    val bot_left: (Double, Double) = (get_XRange._1, get_YRange._1)
+    val bot_right: (Double, Double) = (get_XRange._2, get_YRange._1)
+    // Four middle points on each zone border
+    val left_mid: (Double, Double) = (top_left._1, (top_left._2 - bot_left._2)/2)
+    val top_mid: (Double, Double) = ((top_right._1 - top_left._1)/2 ,top_left._2)
+    val right_mid: (Double, Double) = (top_right._1, (top_right._2 - bot_right._2)/2)
+    val bot_mid: (Double, Double) = ((bot_right._1 - bot_left._1)/2, bot_left._2)
+    // Right Neighbor
+    if(P._1 > top_mid._1 && 2*distance(P, right_mid) < (distance(P, top_right) + distance(P, bot_right))) neighborTable.neighbors(2)
+    // Down Neighbor
+    if(P._2 < left_mid._2 && 2*distance(P, bot_mid) < (distance(P, bot_left) + distance(P, bot_right))) neighborTable.neighbors(3)
+    // Left Neighbor
+    else if(P._1 < top_mid._1 && 2*distance(P, left_mid) < (distance(P, top_left) + distance(P, bot_left))) neighborTable.neighbors(0)
+    // Up Neighbor
+    else if(P._2 > left_mid._2 && 2*distance(P, top_mid) < (distance(P, top_left) + distance(P, top_right))) neighborTable.neighbors(1)
+    // Edge Cases (Vertices)
+    // P is completely in the middle (UP)
+    else neighborTable.neighbors(1)
   }
+  def distance(P: (Double, Double), Q: (Double, Double)): Double =
+    (P._2 - Q._2)/(P._1 - Q._1)
   def splitZone(new_node: ActorRef[Node.Command]): Unit = {
 
   }
