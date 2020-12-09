@@ -42,13 +42,10 @@ class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
     val Bot_left: (Double, Double) = (get_XRange._1, get_YRange._1)
     val Bot_right: (Double, Double) = (get_XRange._2, get_YRange._1)
     // Vertices Edge Cases
-    P match{
-      case Top_left => if(neighborTable.neighbors(0).visited) return neighborTable.neighbors(0) else neighborTable.neighbors(1)
-      case Top_right => if(neighborTable.neighbors(1).visited) return neighborTable.neighbors(1) else neighborTable.neighbors(2)
-      case Bot_right => if(neighborTable.neighbors(2).visited) return neighborTable.neighbors(2) else neighborTable.neighbors(3)
-      case Bot_left => if(neighborTable.neighbors(3).visited) return neighborTable.neighbors(3) else neighborTable.neighbors(4)
-      case _ => println("No edge Case")
-    }
+    if(P == Top_left) if(neighborTable.neighbors(0).visited) return neighborTable.neighbors(0) else neighborTable.neighbors(1)
+    if(P == Top_right) if(neighborTable.neighbors(1).visited) return neighborTable.neighbors(1) else neighborTable.neighbors(2)
+    if(P == Bot_right) if(neighborTable.neighbors(2).visited) return neighborTable.neighbors(2) else neighborTable.neighbors(3)
+    if(P == Bot_left) if(neighborTable.neighbors(3).visited) return neighborTable.neighbors(3) else neighborTable.neighbors(4)
     // Four middle points on each zone border
     val left_mid: (Double, Double) = (Top_left._1, (Top_left._2 - Bot_left._2)/2)
     val top_mid: (Double, Double) = ((Top_right._1 - Top_left._1)/2 ,Top_left._2)
