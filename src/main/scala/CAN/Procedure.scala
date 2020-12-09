@@ -6,6 +6,16 @@ object Procedure extends Enumeration {
   def apply[T](): Procedure[T] = new Procedure()
   type routing_type = Value
   val KEY_STORE, KEY_LOOKUP, NEW_NODE = Value
+
+  sealed trait ProcedureType
+  object ProcedureType{
+    sealed trait HasReference extends ProcedureType
+    sealed trait HasZone extends ProcedureType
+    sealed trait HasNeighbor extends ProcedureType
+    sealed trait RoutingType extends ProcedureType
+
+    type Destination = HasReference
+  }
 }
 
 class Procedure[T] {
@@ -14,6 +24,10 @@ class Procedure[T] {
   private var zone: Option[Zone] = None
   private var replyTo: Option[ActorRef[T]] = None
   private var routingPurpose: Option[routing_type] = None
+
+  def getNeighbor : Option[ActorRef[Node.Command]] = neighbor
+  def getZone : Option[Zone] = zone
+  def getReplyTo: Option[ActorRef[T]] = replyTo
 
   def withRoutingPurpose(rp: routing_type): Procedure[T] = {
     routingPurpose = Some(rp)
@@ -34,8 +48,4 @@ class Procedure[T] {
     zone = Some(z)
     this
   }
-
-  def getNeighbor : Option[ActorRef[Node.Command]] = neighbor
-  def getZone : Option[Zone] = zone
-  def getReplyTo: Option[ActorRef[T]] = replyTo
 }
