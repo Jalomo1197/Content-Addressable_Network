@@ -37,26 +37,34 @@ class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
   }
   def identifyNeighborToPointP(P: (Double, Double)): Neighbor = {
     // Four Corners
-    val top_left: (Double, Double) = (get_XRange._1, get_YRange._2)
-    val top_right: (Double, Double) = (get_XRange._2, get_YRange._2)
-    val bot_left: (Double, Double) = (get_XRange._1, get_YRange._1)
-    val bot_right: (Double, Double) = (get_XRange._2, get_YRange._1)
+    val Top_left: (Double, Double) = (get_XRange._1, get_YRange._2)
+    val Top_right: (Double, Double) = (get_XRange._2, get_YRange._2)
+    val Bot_left: (Double, Double) = (get_XRange._1, get_YRange._1)
+    val Bot_right: (Double, Double) = (get_XRange._2, get_YRange._1)
+    // Vertices Edge Cases
+    P match{
+      case Top_left => if(neighborTable.neighbors(0).visited) return neighborTable.neighbors(0) else neighborTable.neighbors(1)
+      case Top_right => if(neighborTable.neighbors(1).visited) return neighborTable.neighbors(1) else neighborTable.neighbors(2)
+      case Bot_right => if(neighborTable.neighbors(2).visited) return neighborTable.neighbors(2) else neighborTable.neighbors(3)
+      case Bot_left => if(neighborTable.neighbors(3).visited) return neighborTable.neighbors(3) else neighborTable.neighbors(4)
+      case _ => println("No edge Case")
+    }
     // Four middle points on each zone border
-    val left_mid: (Double, Double) = (top_left._1, (top_left._2 - bot_left._2)/2)
-    val top_mid: (Double, Double) = ((top_right._1 - top_left._1)/2 ,top_left._2)
-    val right_mid: (Double, Double) = (top_right._1, (top_right._2 - bot_right._2)/2)
-    val bot_mid: (Double, Double) = ((bot_right._1 - bot_left._1)/2, bot_left._2)
+    val left_mid: (Double, Double) = (Top_left._1, (Top_left._2 - Bot_left._2)/2)
+    val top_mid: (Double, Double) = ((Top_right._1 - Top_left._1)/2 ,Top_left._2)
+    val right_mid: (Double, Double) = (Top_right._1, (Top_right._2 - Bot_right._2)/2)
+    val bot_mid: (Double, Double) = ((Bot_right._1 - Bot_left._1)/2, Bot_left._2)
+    // shortest hop || Edge Cases (Edges of zone)
     // Right Neighbor
-    if(P._1 > top_mid._1 && 2*distance(P, right_mid) < (distance(P, top_right) + distance(P, bot_right))) neighborTable.neighbors(2)
+    else if(P._1 > top_mid._1 && 2*distance(P, right_mid) < (distance(P, Top_right) + distance(P, Bot_right)) || P._1 == right_mid._1) neighborTable.neighbors(2)
     // Down Neighbor
-    if(P._2 < left_mid._2 && 2*distance(P, bot_mid) < (distance(P, bot_left) + distance(P, bot_right))) neighborTable.neighbors(3)
+    else if(P._2 < left_mid._2 && 2*distance(P, bot_mid) < (distance(P, Bot_left) + distance(P, Bot_right)) || P._2 == bot_mid._2) neighborTable.neighbors(3)
     // Left Neighbor
-    else if(P._1 < top_mid._1 && 2*distance(P, left_mid) < (distance(P, top_left) + distance(P, bot_left))) neighborTable.neighbors(0)
+    else if(P._1 < top_mid._1 && 2*distance(P, left_mid) < (distance(P, Top_left) + distance(P, Bot_left)) || P._1 == left_mid._1) neighborTable.neighbors(0)
     // Up Neighbor
-    else if(P._2 > left_mid._2 && 2*distance(P, top_mid) < (distance(P, top_left) + distance(P, top_right))) neighborTable.neighbors(1)
-    // Edge Cases (Vertices)
-    // P is completely in the middle (UP)
-    else neighborTable.neighbors(1)
+    else if(P._2 > left_mid._2 && 2*distance(P, top_mid) < (distance(P, Top_left) + distance(P, Top_right)) || P._2 == top_mid._2) neighborTable.neighbors(1)
+    // P is completely in the middle (Right)
+    else neighborTable.neighbors(2)
   }
   def distance(P: (Double, Double), Q: (Double, Double)): Double =
     (P._2 - Q._2)/(P._1 - Q._1)
