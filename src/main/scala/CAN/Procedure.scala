@@ -36,7 +36,7 @@ case class Procedure[T](reference: Option[ActorRef[T]] = None,
 
   def withVisited(v: ActorRef[Node.Command]): Procedure[T] ={
     visited match {
-      case Some(list) =>  this.copy( visited = Some(v :: visited) )
+      case Some(list) =>  this.copy( visited = Some(v :: visited.get) )
       case None =>        this.copy( visited = Some(List(v)) )
     }
   }
