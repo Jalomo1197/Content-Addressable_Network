@@ -4,48 +4,41 @@ import akka.actor.typed.ActorRef
 
 object Procedure extends Enumeration {
   def apply[T](): Procedure[T] = new Procedure()
+
+  /* To identify purpose once zone is found from routing to it */
   type routing_type = Value
   val KEY_STORE, KEY_LOOKUP, NEW_NODE = Value
-
-  sealed trait ProcedureType
-  object ProcedureType{
-    sealed trait HasReference extends ProcedureType
-    sealed trait HasZone extends ProcedureType
-    sealed trait HasNeighbor extends ProcedureType
-    sealed trait RoutingType extends ProcedureType
-
-    type Destination = HasReference
-  }
 }
 
-class Procedure[T] {
+case class Procedure[T](reference: Option[ActorRef[T]] = None,
+                        visited: Option[List[ActorRef[Node.Command]]],
+                        routingPurpose: Option[Procedure.routing_type] = None,
+                        zone: Option[Zone] = None, neighbor: Option[ActorRef[Node.Command]] = None
+                       ) {
   import Procedure.routing_type
-  private var neighbor: Option[ActorRef[Node.Command]] = None
-  private var zone: Option[Zone] = None
-  private var replyTo: Option[ActorRef[T]] = None
-  private var routingPurpose: Option[routing_type] = None
+
 
   def getNeighbor : Option[ActorRef[Node.Command]] = neighbor
   def getZone : Option[Zone] = zone
-  def getReplyTo: Option[ActorRef[T]] = replyTo
+  def getReplyTo: Option[ActorRef[T]] = reference
 
-  def withRoutingPurpose(rp: routing_type): Procedure[T] = {
-    routingPurpose = Some(rp)
-    this
+  def withRoutingPurpose(rp: routing_type): Procedure[T] =
+    this.copy(routingPurpose = Some(rp))
+
+  def withReference(r: ActorRef[T]): Procedure[T] =
+    this.copy(reference = Some(r))
+
+  def withNeighbor(n: ActorRef[Node.Command]): Procedure[T] =
+    this.copy(neighbor = Some(n))
+
+  def withZone(z: Zone): Procedure[T] =
+    this.copy(zone = Some(z))
+
+  def withVisited(v: ActorRef[Node.Command]): Procedure[T] ={
+    visited match {
+      case Some(list) =>  this.copy( visited = Some(v :: visited) )
+      case None =>        this.copy( visited = Some(List(v)) )
+    }
   }
 
-  def withReference(r: ActorRef[T]): Procedure[T] = {
-    replyTo = Some(r)
-    this
-  }
-
-  def withNeighbor(n: ActorRef[Node.Command]): Procedure[T] = {
-    neighbor = Some(n)
-    this
-  }
-
-  def withZone(z: Zone): Procedure[T] = {
-    zone = Some(z)
-    this
-  }
 }
