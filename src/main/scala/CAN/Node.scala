@@ -51,6 +51,9 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
     // Procedure to utilize routing algorithm, to find point P(x,y) in space
     case findZone(p) =>
       ???
+      // Do I have P?
+        // Key loopup || split
+      // Send/rout to best
       // End of cases
     this
   }
