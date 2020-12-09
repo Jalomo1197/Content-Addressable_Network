@@ -30,26 +30,28 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
   var zone: Zone = Zone((-1.0,-1.0),(-1.0,-1.0))
 
   override def onMessage(msg: Node.Command): Behavior[Node.Command] = {
-    case acquiredBootstrap(p) =>
-      p.getReplyTo.get ! getNodeInNetwork(Procedure[Node.Command]().withReference(context.self))
-
-    case acquiredNodeInNetwork(p) =>
-      p.getReplyTo.get ! findZone(Procedure[Node.Command]().withReference(context.self).withZone(zone))
-
-    case setZone(p) =>
-      zone = p.getZone.get
-
+    // Procedure to adjust the first 4 nodes' neighbors
     case initializeNeighbors(nodes) =>
       nodes.foreach(n  => n ! getZone(Procedure[Node.Command]().withReference(context.self)))
-
+    // Response from DNS, procedure contains a bootstrap node
+    case acquiredBootstrap(p) =>
+      p.getReplyTo.get ! getNodeInNetwork(Procedure[Node.Command]().withReference(context.self))
+    // Response from a bootstrap node, procedure contains a active C.A.N. node
+    case acquiredNodeInNetwork(p) =>
+      p.getReplyTo.get ! findZone(Procedure[Node.Command]().withReference(context.self).withZone(zone))
+    // Query for this node's zone
     case getZone(p) =>
       p.getReplyTo.get ! setNeighbor(Procedure[Node.Command]().withNeighbor(context.self).withZone(zone))
-
+    // Command to set this node's zone
+    case setZone(p) =>
+      zone = p.getZone.get
+    // Command to set this node's neighbor
     case setNeighbor(p) =>
       zone.set_neighbor(p.getNeighbor.get, p.getZone.get)
-
-    case findZone(p) => ???
-
+    // Procedure to utilize routing algorithm, to find point P(x,y) in space
+    case findZone(p) =>
+      ???
+      // End of cases
     this
   }
 }
