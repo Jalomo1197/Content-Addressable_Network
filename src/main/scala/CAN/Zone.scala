@@ -26,7 +26,7 @@ object Zone extends Enumeration {
 
 }
 
-class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
+class Zone(X_range: (Double , Double), Y_range: (Double , Double)){
   def get_XRange: (Double , Double) = X_range
   def get_YRange: (Double , Double) = Y_range
 
@@ -53,7 +53,7 @@ class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
     val bot_mid: (Double, Double) = ((Bot_right._1 - Bot_left._1)/2, Bot_left._2)
     // shortest hop || Edge Cases (Edges of zone)
     // Right Neighbor
-    else if(P._1 > top_mid._1 && 2*distance(P, right_mid) < (distance(P, Top_right) + distance(P, Bot_right)) || P._1 == right_mid._1) neighborTable.neighbors(2)
+    if(P._1 > top_mid._1 && 2*distance(P, right_mid) < (distance(P, Top_right) + distance(P, Bot_right)) || P._1 == right_mid._1) neighborTable.neighbors(2)
     // Down Neighbor
     else if(P._2 < left_mid._2 && 2*distance(P, bot_mid) < (distance(P, Bot_left) + distance(P, Bot_right)) || P._2 == bot_mid._2) neighborTable.neighbors(3)
     // Left Neighbor
@@ -66,7 +66,7 @@ class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
   def distance(P: (Double, Double), Q: (Double, Double)): Double =
     (P._2 - Q._2)/(P._1 - Q._1)
   def splitZone(new_node: ActorRef[Node.Command]): Unit = {
-
+    this
   }
   def set_neighbor(node: ActorRef[Node.Command], zone: Zone): Unit = {
     val X_axis = zone.get_XRange
