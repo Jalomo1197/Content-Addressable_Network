@@ -5,7 +5,7 @@ import akka.actor.typed.ActorRef
 object Procedure extends Enumeration {
   def apply[T](): Procedure[T] = new Procedure()
   type routing_type = Value
-  val key_store, key_lookup, new_node = Value
+  val KEY_STORE, KEY_LOOKUP, NEW_NODE = Value
 }
 
 class Procedure[T] {
