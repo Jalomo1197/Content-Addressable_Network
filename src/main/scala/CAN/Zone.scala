@@ -46,9 +46,7 @@ object Zone extends Enumeration {
     if(x == 7.0){ x += 1 }
     (x,y)
   }
-
 }
-
   class Zone(X_range: (Double, Double), Y_range: (Double, Double)) {
     // Ordering: Split -> x then y
     var split = 'x'
@@ -132,6 +130,9 @@ object Zone extends Enumeration {
         // Set Zone for new Node
         new_node_zone = Zone(new_node_half, get_YRange)
         current_node_zone = Zone(second_half, get_YRange)
+        // Update new_node right neighbor (original occupant)
+        set_neighbor(new_node, current_node_zone)
+        // Update original occupant left neighbor (new_node)
         // Split Ordering for next split
         split = 'y'
       }
@@ -145,9 +146,14 @@ object Zone extends Enumeration {
         // Set Zone for new Node
         new_node_zone = Zone(get_XRange, new_node_half)
         current_node_zone = Zone(get_XRange, second_half)
+        // Update new_node Top neighbor (original occupant)
+        set_neighbor(new_node, current_node_zone)
+        // Update original occupant left neighbor (new_node)
+
         // Split Ordering for next split
         split = 'x'
       }
+      val t = neighborTable.neighbors(0)
       // Update Neighbors for new node
       new_node_zone.setNeighborTable(0, neighborTable.neighbors(0))
       new_node_zone.setNeighborTable(1, neighborTable.neighbors(1))
@@ -156,6 +162,9 @@ object Zone extends Enumeration {
       new_node_zone.setNeighborTable(3, neighborTable.neighbors(3))
       // Update (Left neighbor) of original occupant to new node
       // How do I get occupant ActorRef?
+    }
+    def updateNeighbors(): Unit = {
+
     }
     def findDirection(zone: Zone): Zone.direction = {
       val X_axis = zone.get_XRange
