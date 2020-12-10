@@ -1,81 +1,81 @@
 package CAN
 
-
+import akka.actor.ActorPath
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
-
 import scala.util.Random
 
 object Bootstrap{
   def apply():  Behavior[Command] = Behaviors.setup(context => new Bootstrap(context))
 
   trait Command
-
+  // For setting up initial nodes when DNS is created
   case class initializeZones() extends Command
+  // For new nodes that want access to an existing node in CAN
   case class getNodeInNetwork(p: Procedure[Node.Command]) extends Command
 }
-
+// TODO: line 40 case insert(kv)
 class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavior[Bootstrap.Command](context){
-  import Bootstrap._
+  // Importing relevant commands
   import Node.{acquiredNodeInNetwork,findZone,setZone,initializeNeighbors}
+  import Bootstrap._
   import DNS.insert
-
-  var zone_count = 0
+  // List of up and running nodes in network
   var active_nodes: List[ActorRef[Node.Command]] = List.empty[ActorRef[Node.Command]]
-  // Assign Zones
-  // Assign Neighbors
 
+  /**********************      COMMAND PROCESSING       **********************/
   override def onMessage(msg: Bootstrap.Command): Behavior[Bootstrap.Command] = {
     msg match {
-
+      /* For setting up initial nodes when DNS is created */
       case initializeZones() =>
         initializeNeighborsFromBoot()
-        this.zone_count += 4
-        this
+
+      /* For new nodes that want access to an existing node in CAN (Randomly chosen) */
       case getNodeInNetwork(p) =>
-        // Randomly choose node from bootstrap node
-        val node = getRandomNode(active_nodes, new Random())
-        p.getReplyTo.get ! acquiredNodeInNetwork(Procedure[Node.Command]().withReference(active_nodes.head))
-        context.log.info(this.getClass +" : getRandomNode(p) => ")
-        this
-      case insert(kv) =>
-        active_nodes.foreach(a => a ! findZone (kv))
-        context.log.info(this.getClass +" : inserting(kv) => Node" + kv.toString)
-        this
+        val nodeInNetwork = getRandomNode
+        val new_node = p.getReplyTo.get
+        new_node ! acquiredNodeInNetwork(Procedure[Node.Command]().withReference(nodeInNetwork))
+        context.log.info(s"$thisPath: New Node Procedure :: acquiredNodeInNetwork(Procedure) => New Node")
+
+      /* For insertion of new (key, Value) into distributed map */
+      // TODO: change to one random node only, AFTER routing (Zone.closetToP) is completed
+      case insert(p) =>
+        active_nodes.foreach(a => a ! findZone (p))
+        context.log.info(s"$thisPath: Insert ${p.getDHTpair.get} Procedure :: findZone(kv) => Node In Network")
     }
+    this
   }
+  /**********************     END OF COMMAND PROCESSING       **********************/
 
-  def initializeNeighborsFromBoot():Unit = {
 
-
-    context.log.info("BOOTSTRAP: INITIALIZING NODES")
-    // init 16x16 conceptual grid into 4 coordinate planes ( + ) where center of + is ( x = 7, y = 7 )
-    // Self defined circular coordinate plane ( + ) meaning List (1) would be top left, then (2) right, then (3) below 1 and 4 below 2
-    //    1 = (0,7),(0,7)  -> (x,y) = (0,0),(7,7)
-    //    2 = (7,15),(0,7) -> (x,y) = (7,0),(15,7)
-    //    3 = (0,7),(7,15) -> (x,y) = (0,7),(7,15)
-    //    4 = (7,15),(7,15)-> (x,y) = (7,7),(15,15)
-    var initialZones = List( Zone((0, 7), (0, 7)) , Zone((7, 15), (0, 7)), Zone((0, 7), (7, 15)), Zone((7, 15), (7, 15)))
-
-    /* Spawn New Nodes */
+  /*  init 16x16 conceptual grid into 4 coordinate planes ( + ) where center of + is ( x = 7, y = 7 )
+      Self defined circular coordinate plane ( + ) meaning List (1) would be top left,
+      then (2) right, then (3) below 1 and 4 below 2
+      1 = (0,7),(0,7)  -> (x,y) = (0,0),(7,7)
+      2 = (7,15),(0,7) -> (x,y) = (7,0),(15,7)
+      3 = (0,7),(7,15) -> (x,y) = (0,7),(7,15)
+      4 = (7,15),(7,15)-> (x,y) = (7,7),(15,15)                                                   */
+  def initializeNeighborsFromBoot(): Unit = {
+    context.log.info("BOOTSTRAP: INITIALIZING FIRST FOUR NODES IN C.A.N.")
+    val initialZones = List(Zone((0, 7), (0, 7)),
+                            Zone((7, 15), (0, 7)),
+                            Zone((0, 7), (7, 15)),
+                            Zone((7, 15), (7, 15)))
+    // Four nodes created and assigned zones
     for(i <- 0 until 4){
       val new_node = context.spawn(Node(),s"CAN-node-$i")
       active_nodes +:= new_node
       new_node ! setZone(Procedure[Node.Command]().withZone(initialZones(i)))
     }
-
+    // Each node will query each other node and set neighbors appropriately
     active_nodes.foreach(node => {
       node ! initializeNeighbors(active_nodes)
     })
-
-
-    /* Zones must acknowledge each other as neighbors */
-    //zone.set_neighbors(List(zone2, zone3))
-    //zone2.set_neighbors(List(zone, zone4))
-    //zone3.set_neighbors(List(zone, zone4))
-    //zone4.set_neighbors(List(zone2, zone3))
   }
-  def getRandomNode[A](seq: Seq[A], random: Random): A =
-    seq(random.nextInt(seq.length))
+
+  // To obtain arbitrary C.A.N. node within active_nodes
+  def getRandomNode: ActorRef[Node.Command] = active_nodes(new Random().nextInt(active_nodes.length))
+
+  def thisPath: ActorPath = context.self.path
 }
 
