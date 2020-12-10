@@ -29,7 +29,8 @@ class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Comma
   var dictionary: Map[String, String] = Map.empty[String, String]
   var boots = 1
   var bootstraps: List[ActorRef[Bootstrap.Command]] = List(context.spawn(Bootstrap(), s"node-bootstrap-$boots"))
-  bootstraps.head ! initializeZones
+  context.log.info("DNS CREATED")
+  bootstraps.head ! initializeZones()
 
   override def onMessage(msg: DNS.Command): Behavior[DNS.Command] = {
     msg match {
@@ -41,7 +42,7 @@ class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Comma
       // DNS to Boot to Zone,
       // for item in config file, we receive the (key,value) and send to bootstrap here.
       case insert(procedure) =>
-        context.log.info(this.getClass +" : inserting(procedure) => Bootstrap ")
+        context.log.info(this.getClass + s" : inserting(${procedure.getDHTpair.get}) => Bootstrap ")
         bootstraps.head ! insert(procedure)
         this
     }

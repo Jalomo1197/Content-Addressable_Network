@@ -21,7 +21,7 @@ class User(context: ActorContext[User.Command]) extends AbstractBehavior[User.Co
   import User._
   import DNS.insert
   import Procedure.{KEY_STORE, KEY_LOOKUP}
-  val dns: ActorRef[CAN.DNS.Command] = DNS.getDNSActor.getReference
+  val dns: ActorRef[DNS.Command] = DNS.getDNSActor.getReference
   var dictionary: Map[String, String] = Map.empty[String, String]
 
   override def onMessage(msg: Command): Behavior[User.Command] = {

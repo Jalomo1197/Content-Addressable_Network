@@ -11,13 +11,13 @@ object Bootstrap{
 
   trait Command
 
-  final case object initializeZones extends Command
+  case class initializeZones() extends Command
   case class getNodeInNetwork(p: Procedure[Node.Command]) extends Command
 }
 
 class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavior[Bootstrap.Command](context){
   import Bootstrap._
-  import Node.{acquiredNodeInNetwork,findZone}
+  import Node.{acquiredNodeInNetwork,findZone,setZone,initializeNeighbors}
   import DNS.insert
 
   var zone_count = 0
@@ -28,7 +28,7 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
   override def onMessage(msg: Bootstrap.Command): Behavior[Bootstrap.Command] = {
     msg match {
 
-      case initializeZones =>
+      case initializeZones() =>
         initializeNeighborsFromBoot()
         this.zone_count += 4
         this
@@ -46,8 +46,9 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
   }
 
   def initializeNeighborsFromBoot():Unit = {
-    import Node.{setZone,initializeNeighbors}
 
+
+    context.log.info("BOOTSTRAP: INITIALIZING NODES")
     // init 16x16 conceptual grid into 4 coordinate planes ( + ) where center of + is ( x = 7, y = 7 )
     // Self defined circular coordinate plane ( + ) meaning List (1) would be top left, then (2) right, then (3) below 1 and 4 below 2
     //    1 = (0,7),(0,7)  -> (x,y) = (0,0),(7,7)

@@ -31,6 +31,7 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
   // Zone for Actor is unset
   var zone: Zone = Zone((-1.0,-1.0),(-1.0,-1.0))
   var distributedMap: Map[String, String] = Map()
+  context.log.info(s"NODE CREATED: ${context.self.path}")
 
   override def onMessage(msg: Node.Command): Behavior[Node.Command] = {
     msg match {
