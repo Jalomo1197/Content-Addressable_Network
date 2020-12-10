@@ -38,26 +38,20 @@ class User(context: ActorContext[User.Command]) extends AbstractBehavior[User.Co
             .withLocation(Zone.findLocation(pair._1))
             .withRoutingPurpose(KEY_STORE))
         })
+
       case insertConfirmed(key: String, value: String) =>
+        context.log.info("KEY: " + key + " , VALUE: " + value + "inserted!")
+
       case queryResponse(key, value) =>
         value match {
           case None =>
-            context.log.info("KEY: " + key + " is not in distributed map")
+            context.log.info("KEY: " + key + " is NOT in distributed map")
           case Some(v) =>
             context.log.info("KEY: " + key + " found, VALUE: " + v)
         }
     }
     this
   }
-  /*
-      Asynchronous function:
-        Sends keyLookup command to Chord
-
-  def queryKey(key: String): Unit = {
-    context.log.info("USER sent query to CHORD, KEY: " + key)
-    chord ! keyLookup(key, context.self)
-  }
-   */
 
   /* Signal handling */
   override def onSignal: PartialFunction[Signal, Behavior[User.Command]] = {

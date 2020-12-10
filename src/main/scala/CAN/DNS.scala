@@ -24,10 +24,11 @@ object DNS{
    * then to a Node in the network. Finally the routing to the node/zone of insertion begins
    * with a FindZone command */
   case class insert(p: Procedure[Node.Command]) extends Command with Bootstrap.Command
+  case class keyLookup(p: Procedure[Node.Command]) extends Command with Bootstrap.Command
 }
 
 class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Command](context) {
-  import DNS.{insert,bootstrap}
+  import DNS.{insert,bootstrap, keyLookup}
   import Node.acquiredBootstrap
   import Bootstrap.initializeZones
 
@@ -48,6 +49,10 @@ class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Comma
       case insert(procedure) =>
         context.log.info(this.getClass + s" : inserting(${procedure.getDHTpair.get}) => Bootstrap ")
         bootstraps.head ! insert(procedure)
+
+      case keyLookup(procedure) =>
+        bootstraps.head ! keyLookup(procedure)
+
     }
     this
   }
