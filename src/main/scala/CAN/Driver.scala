@@ -2,9 +2,15 @@ package CAN
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorSystem, Behavior}
+import com.typesafe.config.ConfigFactory
+import net.ceedubs.ficus.Ficus._
+import com.typesafe.config.Config
 
 object Simulation {
   def main(args: Array[String]): Unit = {
+    val config: Config = ConfigFactory.load("simpleData.conf")
+    val configDictionary = config.as[Map[String, String]]("dictionary")
+
     val system: ActorSystem[Driver.lookup] =
       ActorSystem(Driver(), "driver")
 
