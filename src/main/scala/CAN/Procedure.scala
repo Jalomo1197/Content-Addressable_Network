@@ -36,6 +36,7 @@ case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
   def getRoutingPurpose: Option[routing_type] = routingPurpose
   def getNeighbor : Option[ActorRef[Node.Command]] = neighbor
   def getDHTpair: Option[(String, String)] = key_value
+  def getKeyLookup: Option[String] = key_lookup
   def getLocation: Option[(Double, Double)] = location
   def getReplyTo: Option[ActorRef[T]] = reference
   def getZone : Option[Zone] = zone
