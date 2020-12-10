@@ -102,10 +102,15 @@ object Zone extends Enumeration {
 
       if(P_In_XRange(P)) {
         val dir = optimal_YDirection(P)
-        if (neighborTable.neighbors(dir) != null && procedure.wasVisited())
+        val neighbor = neighborTable.neighbors(dir.id).getNode
+        if (neighbor != null && !procedure.wasVisited(neighbor))
+          List(neighbor)
       }
       if(P_In_YRange(P)) {
         val dir = optimal_XDirection(P)
+        val neighbor = neighborTable.neighbors(dir.id).getNode
+        if (neighbor != null && !procedure.wasVisited(neighbor))
+          List(neighbor)
       }
       // Vertex
      // if(P._1 > get_XRange._2 && P._2 > get_YRange._2) return topRight
