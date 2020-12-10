@@ -1,6 +1,6 @@
 package CAN
 
-import CAN.DNS.Command
+
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 
@@ -48,5 +48,5 @@ class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Comma
 
   }
   /* User obtain ActorRef to Chord Singleton via User.getChordActor.getReference */
-  def getReference: ActorRef[Command] = context.self
+  def getReference: ActorRef[DNS.Command] = context.self
 }
