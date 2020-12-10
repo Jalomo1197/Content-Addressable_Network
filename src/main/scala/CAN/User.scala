@@ -1,6 +1,5 @@
 package CAN
 
-import CAN.Procedure.NEW_NODE
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import net.ceedubs.ficus.Ficus._
