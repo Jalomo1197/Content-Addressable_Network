@@ -58,6 +58,8 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
         p.getRoutingPurpose.get match {
           case KEY_LOOKUP =>
             // return key_value pair to user
+            val key = p.getKeyLookup.get
+            p.getUser.get ! keyResponse(key, distributedMap.getOrElse(key, "NOT FOUND"))
           case KEY_STORE =>
             val (key, value) = p.getDHTpair.get
             distributedMap += (key -> value)
