@@ -1,27 +1,18 @@
 package CAN
 
-import CAN.Zone.{left, right, up, down}
+import CAN.Zone.{Down, Left, Right, Up, default}
 import akka.actor.typed.ActorRef
 import com.typesafe.config.ConfigFactory
 
 object Zone extends Enumeration {
   type direction = Value
-  val left, up, right, down = Value
+  val Left, Up, Right, Down, default = Value
 
   val m: Int = ConfigFactory.load("application.conf").getInt("matrix_size")
-  // 0 -> x
-  // 1 -> y
-
 
   def apply(X_range: (Double , Double), Y_range: (Double , Double)): Zone = new Zone(X_range, Y_range)
 
   def findLocation(movieTitle: String): (Double, Double) = {
-//    val n: Int = movieTitle.length
-//    val first_half: String = movieTitle.substring(0, n/2)
-//    val second_half: String = movieTitle.substring(n/2)
-//    val X: Double = Hash.encrypt(first_half, 8) % m
-//    val Y: Double = Hash.encrypt(second_half, 8) % m
-//    (X,Y)
 // encrypt using SHA-1 Format
     val md = java.security.MessageDigest.getInstance("SHA-1")
     println(md.digest(movieTitle.getBytes("UTF-8")).map("%02x".format(_)).mkString)
@@ -33,22 +24,22 @@ object Zone extends Enumeration {
     // convert SHA-1 to coordinate plane of 16x16 for (x,y)
     // X,Y = Hash(Sum(hash(0,2)), Hash(Sum(hash(2,4))
     var x =
-    ((firstFour.slice(0,1).
+    (firstFour.slice(0,1).
       replace("A","10").replace("B","11").replace("C","12").
-      replace("D","14").replace("E","15").replace("F","16").toDouble)
+      replace("D","14").replace("E","15").replace("F","16").toDouble
       +
-      (firstFour.slice(1,2).
+      firstFour.slice(1,2).
         replace("A","10").replace("B","11").replace("C","12").
-        replace("D","14").replace("E","15").replace("F","16")).toDouble)/2.0
+        replace("D","14").replace("E","15").replace("F","16").toDouble)/2.0
 
     var y =
-      ((firstFour.slice(2, 3).
+      (firstFour.slice(2, 3).
         replace("A", "10").replace("B", "11").replace("C", "12").
-        replace("D", "14").replace("E", "15").replace("F", "16").toDouble)
+        replace("D", "14").replace("E", "15").replace("F", "16").toDouble
         +
-        (firstFour.slice(3, 4).
+        firstFour.slice(3, 4).
           replace("A", "10").replace("B", "11").replace("C", "12").
-          replace("D", "14").replace("E", "15").replace("F", "16")).toDouble) / 2.0
+          replace("D", "14").replace("E", "15").replace("F", "16").toDouble) / 2.0
 
     // if x or y lay on the border, we always go x+1, or y+1 to designate it into proper zone
     if(y == 7.0){ y += 1 }
@@ -65,36 +56,39 @@ object Zone extends Enumeration {
 
     def setNeighborTable(index: Int, entry: Neighbor): Unit =
       neighborTable.neighbors(index) = entry
+
     def get_XRange: (Double, Double) = X_range
 
     def get_YRange: (Double, Double) = Y_range
 
     def formatZone: String = s"X Range: $X_range Y Range: $Y_range"
 
-    def containsP(P: (Double, Double)): Boolean = {
-      val x_range = get_XRange
-      val y_range = get_YRange
-      P._1 >= x_range._1 && P._1 <= x_range._2 && P._2 >= y_range._1 && P._2 <= y_range._2
-    }
+    def containsP(P: (Double, Double)): Boolean =
+      P._1 >= get_XRange._1 && P._1 <= get_XRange._2 && P._2 >= get_YRange._1 && P._2 <= get_YRange._2
 
     def closestPointToP(P: (Double, Double)): (Double, Double) = {
       // Assume P not within zone
       // Scan x-axis
-      if(P._1 > get_XRange._1 && P._1 < get_XRange._2){
-        // Check closest y
-         if(P._2 > get_YRange._2) return (P._1, get_YRange._2) else return (P._1, get_YRange._1)
-      }
+      if(closestX(P)) closestPointViaY(P)
       // Scan y - axis
-      if(P._2 > get_YRange._1 && P._2 < get_YRange._2){
-        // Check closest X
-        if(P._1 > get_XRange._2) return (get_XRange._2, P._2) else return (get_XRange._1, P._2)
-      }
+      if(closestY(P)) closestPointViaX(P)
       // Vertex
       if(P._1 > get_XRange._2 && P._2 > get_YRange._2) return topRight
       if(P._1 > get_XRange._2 && P._2 < get_YRange._1) return botRight
       if(P._1 < get_XRange._1 && P._2 < get_YRange._1) botLeft else topLeft
       // Check closest has not been visited
     }
+    def closestX(P: (Double, Double)): Boolean =
+      P._1 > get_XRange._1 && P._1 < get_XRange._2
+
+    def closestPointViaY(P: (Double, Double)): (Double, Double) =
+      if(P._2 > get_YRange._2) (P._1, get_YRange._2) else (P._1, get_YRange._1)
+
+    def closestPointViaX(P: (Double, Double)): (Double, Double) =
+      if(P._1 > get_XRange._2) (get_XRange._2, P._2) else (get_XRange._1, P._2)
+
+    def closestY(P: (Double, Double)): Boolean =
+      P._2 > get_YRange._1 && P._2 < get_YRange._2
 
     def topLeft: (Double, Double) =
       (get_XRange._1, get_YRange._2)
@@ -155,34 +149,36 @@ object Zone extends Enumeration {
       // Update (Left neighbor) of original occupant to new node
       // How do I get occupant ActorRef?
     }
+    def findDirection(zone: Zone): Zone.direction = {
+      val X_axis = zone.get_XRange
+      val Y_axis = zone.get_YRange
+      if(X_axis._1 < get_XRange._1 && X_axis._2 == get_XRange._1 && Y_axis == get_YRange) Left
+      else if(X_axis._1 == get_XRange._2 && X_axis._2 > get_XRange._1 && Y_axis == get_YRange) Right
+      else if(X_axis == get_XRange && Y_axis._1 == get_YRange._2 && Y_axis._2 > get_YRange._2) Up
+      else Down
+    }
+
+    def identicalZone(zone: Zone): Boolean =
+      get_XRange == zone.get_XRange && get_YRange == zone.get_YRange
 
     def set_neighbor(node: ActorRef[Node.Command], zone: Zone): Unit = {
       val X_axis = zone.get_XRange
       val Y_axis = zone.get_YRange
-      val x = get_XRange
-      val y = get_YRange
-      var direction = left
+      var direction = default
       var entry = Neighbor(node, (0, 0), direction)
       // Same Zone
-      if (x == X_axis && y == Y_axis) return
+      if (identicalZone(zone)) return
       /* Find Direction of neighbor */
-      if (X_axis._1 < x._1 && X_axis._2 == x._1 && Y_axis == y)
-        direction = left
-      else if (X_axis._1 == x._2 && X_axis._2 > x._1 && Y_axis == y)
-        direction = right
-      else if (X_axis == x && Y_axis._1 == y._2 && Y_axis._2 > y._2)
-        direction = up
-      else if (X_axis == x && Y_axis._1 > y._2 && Y_axis._2 == y._2)
-        direction = down
+      direction = findDirection(zone)
       // Set Up Entry
-      if (direction == up || direction == down) {
+      if (direction == Up || direction == Down) {
         entry = Neighbor(node, X_axis, direction)
-        if (direction == up) neighborTable.neighbors(1) = entry
+        if (direction == Up) neighborTable.neighbors(1) = entry
         else neighborTable.neighbors(3) = entry
       }
-      if (direction == left || direction == right) {
+      if (direction == Left || direction == Right) {
         entry = Neighbor(node, Y_axis, direction)
-        if (direction == left) neighborTable.neighbors(0) = entry
+        if (direction == Left) neighborTable.neighbors(0) = entry
         else neighborTable.neighbors(2) = entry
       }
     }
