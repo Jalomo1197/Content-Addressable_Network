@@ -16,6 +16,7 @@ object Procedure extends Enumeration {
 *   neighborsToUpdate:  For updating node when a split has occurred
 *   location:           This is the P location (From: new_node -> random P or key -> hashed -> deterministic (X, Y))
 *   keyValue:           Key value to store at location
+*   keyLookup           Key to query DHT map at the node key was mapped to
 *   routingPurpose:     For next actions based on the purpose of finding a zone
 *   zone:               For zone assignment/querying
 * */
@@ -41,6 +42,12 @@ case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
 
   def withKeyToFind(s: String):  Procedure[T] =
     this.copy(key_lookup = Some(s))
+
+  def withKeyValueToStore(pair: (String, String)): Procedure[T] =
+    this.copy(key_value = Some(pair))
+
+  def withLocation(xy: (Double, Double)) : Procedure[T] =
+    this.copy(location = Some(xy))
 
   def withNeighborsToUpdate(n: List[Neighbor]): Procedure[T] =
     this.copy(neighborsToUpdate = Some(n))
