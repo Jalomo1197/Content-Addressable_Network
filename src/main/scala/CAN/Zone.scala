@@ -107,13 +107,6 @@ object Zone extends Enumeration {
     def botRight: (Double, Double) =
       (get_XRange._2, get_YRange._1)
 
-    // NeighborTable of Point P
-    def identifyNeighborsToPointP(P: (Double, Double)): Neighbors = {
-      // Identify Zone
-      neighborTable
-      // NeighborTable
-    }
-
     def distance(P: (Double, Double), Q: (Double, Double)): Double =
       (P._2 - Q._2) / (P._1 - Q._1)
 
