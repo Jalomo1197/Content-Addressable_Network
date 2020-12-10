@@ -1,24 +1,28 @@
 package CAN
 
-
+import akka.actor.ActorPath
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 
-
 object DNS{
-  // Allowing one instances of chord actor for now.
+  // Allowing one instances of DNS actor for now, To simulate HTTP connection
   private var DNS_Singleton: Option[DNS] = None
-  // Gets the Chord class
-  def getDNSActor: DNS = DNS_Singleton.get
-  // Apply function called by Chord(...)
+  // Apply
   def apply(): Behavior[Command] =
     Behaviors.setup(context => {
       DNS_Singleton = Some(new DNS(context))
       DNS_Singleton.get
     })
+  // Gets the DNS instance, simulating HTTP request
+  def getDNSActor: DNS = DNS_Singleton.get
 
   trait Command
+  /** Acquire A Bootstrap Node Procedure: A node requesting to gone space is
+   * querying DNS for bootstrap node */
   case class bootstrap(p: Procedure[Node.Command]) extends Command
+  /** Insert Procedure: Command is passed down by User to DNS, then to a Bootstrap node,
+   * then to a Node in the network. Finally the routing to the node/zone of insertion begins
+   * with a FindZone command */
   case class insert(p: Procedure[Node.Command]) extends Command with Bootstrap.Command
 }
 
@@ -26,28 +30,33 @@ class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Comma
   import DNS.{insert,bootstrap}
   import Node.acquiredBootstrap
   import Bootstrap.initializeZones
-  var dictionary: Map[String, String] = Map.empty[String, String]
+
   var boots = 1
   var bootstraps: List[ActorRef[Bootstrap.Command]] = List(context.spawn(Bootstrap(), s"node-bootstrap-$boots"))
   context.log.info("DNS CREATED")
   bootstraps.head ! initializeZones()
 
+  /**********************      COMMAND PROCESSING       **********************/
   override def onMessage(msg: DNS.Command): Behavior[DNS.Command] = {
     msg match {
       case bootstrap(procedure) =>
-        context.log.info(this.getClass +" : acquiredBootsrap(procedure) => Bootstrap")
         procedure.getReplyTo.get ! acquiredBootstrap(Procedure[Bootstrap.Command]().withReference(bootstraps.head))
-        this
+        context.log.info(s"$thisPath: acquiredBootstrap(procedure) => New Node")
 
       // DNS to Boot to Zone,
       // for item in config file, we receive the (key,value) and send to bootstrap here.
       case insert(procedure) =>
         context.log.info(this.getClass + s" : inserting(${procedure.getDHTpair.get}) => Bootstrap ")
         bootstraps.head ! insert(procedure)
-        this
     }
-
+    this
   }
-  /* User obtain ActorRef to Chord Singleton via User.getChordActor.getReference */
-  def getReference: ActorRef[DNS.Command] = context.self
+  /**********************     END OF COMMAND PROCESSING       **********************/
+
+
+  /* User obtain ActorRef to DNS Singleton */
+  def connectToDNS: ActorRef[DNS.Command] = context.self
+
+  // Alias for context.self.path
+  def thisPath: ActorPath = context.self.path
 }
