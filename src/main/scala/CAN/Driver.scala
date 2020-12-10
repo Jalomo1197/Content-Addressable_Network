@@ -17,8 +17,8 @@ object Simulation {
     val system: ActorSystem[Driver.lookup] =
       ActorSystem(Driver(), "driver")
 
-    system ! Driver.lookup("ToyStory")
-    system ! Driver.lookup("MoneyTrain")
+    system ! Driver.lookup("Jumanji")
+    system ! Driver.lookup("FatheroftheBridePartII")
   }
 }
 
