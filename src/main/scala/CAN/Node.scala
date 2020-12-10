@@ -50,9 +50,15 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
       zone.set_neighbor(p.getNeighbor.get, p.getZone.get)
     // Procedure to utilize routing algorithm, to find point P(x,y) in space
     case findZone(p) =>
-      ???
-      // Do I have P?
-        // Key loopup || split
+      // If point P is in this nodes zone
+      if (zone.containsP(p.getLocation.get)) {
+        // identify purpose
+        // Key loopup || split || keyInsert
+      }
+      else{
+        // Closest neighbor to P (that has not been visited)
+
+      }
       // Send/rout to best
       // End of cases
     this

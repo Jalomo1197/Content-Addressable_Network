@@ -17,12 +17,44 @@ object Zone extends Enumeration {
   def apply(X_range: (Double , Double), Y_range: (Double , Double)): Zone = new Zone(X_range, Y_range)
 
   def findLocation(movieTitle: String): (Double, Double) = {
-    val n: Int = movieTitle.length
-    val first_half: String = movieTitle.substring(0, n/2)
-    val second_half: String = movieTitle.substring(n/2)
-    val X: Double = Hash.encrypt(first_half, 8) % m
-    val Y: Double = Hash.encrypt(second_half, 8) % m
-    (X,Y)
+//    val n: Int = movieTitle.length
+//    val first_half: String = movieTitle.substring(0, n/2)
+//    val second_half: String = movieTitle.substring(n/2)
+//    val X: Double = Hash.encrypt(first_half, 8) % m
+//    val Y: Double = Hash.encrypt(second_half, 8) % m
+//    (X,Y)
+// encrypt using SHA-1 Format
+    val md = java.security.MessageDigest.getInstance("SHA-1")
+    println(md.digest(movieTitle.getBytes("UTF-8")).map("%02x".format(_)).mkString)
+
+    // take the first four after SHA1 conversion
+    val firstFour = md.digest(movieTitle.getBytes("UTF-8")).map("%02x".format(_)).mkString.slice(0,4).map(_.toUpper)
+    //println(firstFour)
+
+    // convert SHA-1 to coordinate plane of 16x16 for (x,y)
+    // X,Y = Hash(Sum(hash(0,2)), Hash(Sum(hash(2,4))
+    var x =
+    ((firstFour.slice(0,1).
+      replace("A","10").replace("B","11").replace("C","12").
+      replace("D","14").replace("E","15").replace("F","16").toDouble)
+      +
+      (firstFour.slice(1,2).
+        replace("A","10").replace("B","11").replace("C","12").
+        replace("D","14").replace("E","15").replace("F","16")).toDouble)/2.0
+
+    var y =
+      ((firstFour.slice(2, 3).
+        replace("A", "10").replace("B", "11").replace("C", "12").
+        replace("D", "14").replace("E", "15").replace("F", "16").toDouble)
+        +
+        (firstFour.slice(3, 4).
+          replace("A", "10").replace("B", "11").replace("C", "12").
+          replace("D", "14").replace("E", "15").replace("F", "16")).toDouble) / 2.0
+
+    // if x or y lay on the border, we always go x+1, or y+1 to designate it into proper zone
+    if(y == 7.0){ y += 1 }
+    if(x == 7.0){ x += 1 }
+    (x,y)
   }
 
 }
