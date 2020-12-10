@@ -5,7 +5,7 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 
 object Node{
-  def apply():  Behavior[Command] = Behaviors.setup(context => new Node(context))
+  def apply():  Behavior[Command] = Behaviors.setup(new Node(_))
 
   trait Command
   // Reply from DNS, providing a bootstrap node
