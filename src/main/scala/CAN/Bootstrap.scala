@@ -18,6 +18,7 @@ object Bootstrap{
 class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavior[Bootstrap.Command](context){
   import Bootstrap._
   import Node.acquiredNodeInNetwork
+  import DNS.bootstrap
 
   var zone_count = 0
   var active_nodes: List[ActorRef[Node.Command]] = List.empty[ActorRef[Node.Command]]
@@ -26,6 +27,7 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
 
   override def onMessage(msg: Bootstrap.Command): Behavior[Bootstrap.Command] = {
     msg match {
+
       case initializeZones =>
         initializeNeighbors()
         this.zone_count += 4
