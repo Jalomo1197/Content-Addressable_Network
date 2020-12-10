@@ -3,10 +3,15 @@ package CAN
 import CAN.Zone.{Down, Left, Right, Up, default}
 import akka.actor.typed.ActorRef
 import com.typesafe.config.ConfigFactory
+import javax.print.attribute.standard.DialogOwner
 
 object Zone extends Enumeration {
   type direction = Value
-  val Left, Up, Right, Down, default = Value
+  val Left: direction = Value(0)
+  val Up: direction = Value(1)
+  val Right: direction = Value(2)
+  val Down: direction = Value(3)
+  val default: direction = Value(-1)
 
   val m: Int = ConfigFactory.load("application.conf").getInt("matrix_size")
 
@@ -53,7 +58,8 @@ object Zone extends Enumeration {
     // Ordering: Split -> x then y
     var split = 'x'
     var neighborTable: Neighbors = Neighbors()
-
+    import Zone.{Up, Down, Left, Right, default}
+    
     def setNeighborTable(index: Int, entry: Neighbor): Unit =
       neighborTable.neighbors(index) = entry
 
@@ -67,36 +73,43 @@ object Zone extends Enumeration {
       P._1 >= get_XRange._1 && P._1 <= get_XRange._2 && P._2 >= get_YRange._1 && P._2 <= get_YRange._2
 
     def closestPointToP(procedure: Procedure[Node.Command]): List[ActorRef[Node.Command]] = {
-      // Assume P not within zone
+      // If this function is executed, P was not in this node's zone
       val P: (Double, Double) = procedure.getLocation.get
-      // Scan x-axis, If P's X value is within range
-      if(closestX(P))
-        closestPointViaY(P) // up or down
-      // Scan y - axis, If P's Y value is within range
-      if(closestY(P)) closestPointViaX(P) // left or right
+
+      if(P_In_XRange(P)) {
+        val dir = optimal_YDirection(P)
+        if (neighborTable.neighbors(dir) != null && procedure.wasVisited())
+      }
+      if(P_In_YRange(P)) {
+        val dir = optimal_XDirection(P)
+      }
       // Vertex
-      if(P._1 > get_XRange._2 && P._2 > get_YRange._2) return topRight
-      if(P._1 > get_XRange._2 && P._2 < get_YRange._1) return botRight
-      if(P._1 < get_XRange._1 && P._2 < get_YRange._1) botLeft else topLeft
+     // if(P._1 > get_XRange._2 && P._2 > get_YRange._2) return topRight
+     // if(P._1 > get_XRange._2 && P._2 < get_YRange._1) return botRight
+     // if(P._1 < get_XRange._1 && P._2 < get_YRange._1) botLeft else topLeft
       // Check closest has not been visited
+      List()
     }
 
+    /** Returns Boolean
+     * Check if P's Y value is in this nodes YRange */
+    def P_In_YRange(P: (Double, Double)): Boolean = get_YRange._1 < P._2 && P._2 < get_YRange._2
 
-    def closestX(P: (Double, Double)): Boolean =
-      P._1 > get_XRange._1 && P._1 < get_XRange._2
+    /** Return Boolean
+     * Check if P's X value is in this nodes XRange */
+    def P_In_XRange(P: (Double, Double)): Boolean = get_XRange._1 < P._1 && P._1 < get_XRange._2
 
-    def closestPointViaY(P: (Double, Double)): (Double, Double) = {
-      // up else down
-      if(P._2 > get_YRange._2) (P._1, get_YRange._2) else (P._1, get_YRange._1)
-    }
+    /** Returns Direction
+     * Find direction to rout. P's X value is in this nodes X range,
+     * while P's Y value is in this nodes Y range. Next node is either UP or DOWN */
+    def optimal_YDirection(P: (Double, Double)): Zone.direction = if(P._2 > get_YRange._2)  Up else  Down
 
-    def closestPointViaX(P: (Double, Double)): (Double, Double) = {
-      // right else left
-      if(P._1 > get_XRange._2) (get_XRange._2, P._2) else (get_XRange._1, P._2)
-    }
-
-    def closestY(P: (Double, Double)): Boolean =
-      P._2 > get_YRange._1 && P._2 < get_YRange._2
+    /** Returns Direction
+     * Find direction to rout. P's Y value is in this nodes Y range,
+     * while P's X value is in this nodes X range. Next node is either LEFT or RIGHT */
+    def optimal_XDirection(P: (Double, Double)): Zone.direction = if (P._1 > get_XRange._2) Right else Left
+    
+    
 
     def topLeft: (Double, Double) =
       (get_XRange._1, get_YRange._2)

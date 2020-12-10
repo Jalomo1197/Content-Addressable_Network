@@ -87,6 +87,12 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
               user ! insertConfirmed(key, value)
               context.log.info(s"($key , $value) WITH LOCATION $location STORED IN ZONE: ${zone.formatZone} ")
             case NEW_NODE =>
+              // split(procedure) [newNode, Location] :
+              //    newNode <- NewZONE , ThisZoneMOD, ThisRef, Neighbors, KEY_VALUE that are not mine (hash keys and extract)
+              //
+              // BOTH newNode & this node:
+              //    every_neighbor <- setNeighbor(myRef, myZone)
+              // this node
               context.log.info("SPLIT NOT IMPLEMENTED")
           }
         }
