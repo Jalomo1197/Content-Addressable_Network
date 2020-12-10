@@ -1,5 +1,6 @@
 package CAN
 
+import CAN.Procedure.NEW_NODE
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import net.ceedubs.ficus.Ficus._
@@ -13,6 +14,7 @@ object User{
   final case class queryResponse(key: String, value: Option[String]) extends Command
   // Insert (K, V) pairs from config
   final case class insertConfig(config: Config) extends Command
+  case class insertConfirmed(key: String, value: String) extends Command
 }
 
 
@@ -29,8 +31,15 @@ class User(context: ActorContext[User.Command]) extends AbstractBehavior[User.Co
       case insertConfig(config) =>
         // Creating dictionary defined in config file: application.conf
         dictionary = config.as[Map[String, String]]("dictionary")
-        // For each dictionary send message to insert on message
-        // Procedure => wUser(context.self)wKeyValueToStore(item)wLocationZone.findLocation(key)wRoutingPurposeKeyStore()
+        dictionary.foreach( pair => {
+          // Send message to insert (K, V) pair
+          dns ! insert(Procedure[Node.Command]()
+            .withUser(context.self)
+            .withKeyValueToStore(pair)
+            .withLocation(Zone.findLocation(pair._1))
+            .withRoutingPurpose(KEY_STORE))
+        })
+      case insertConfirmed(key: String, value: String) =>
       case queryResponse(key, value) =>
         value match {
           case None =>
