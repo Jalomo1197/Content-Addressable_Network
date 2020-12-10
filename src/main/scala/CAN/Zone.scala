@@ -26,16 +26,16 @@ object Zone extends Enumeration {
   }
 
 }
-class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
-  // Ordering: Split -> x then y
-  var split = 'x'
-  var neighborTable: Neighbors = Neighbors()
 
-  def setNeighborTable(index: Int, entry: Neighbor): Unit =
-    neighborTable.neighbors(index) = entry
+
 
   class Zone(X_range: (Double, Double), Y_range: (Double, Double)) {
+    // Ordering: Split -> x then y
+    var split = 'x'
+    var neighborTable: Neighbors = Neighbors()
 
+    def setNeighborTable(index: Int, entry: Neighbor): Unit =
+      neighborTable.neighbors(index) = entry
     def get_XRange: (Double, Double) = X_range
 
     def get_YRange: (Double, Double) = Y_range
@@ -148,4 +148,3 @@ class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
     }
   }
 
-}
