@@ -14,22 +14,30 @@ object Procedure extends Enumeration {
 *   reference:          For the next send or a reply to
 *   visited:            For book-keeping visited nodes
 *   neighborsToUpdate:  For updating node when a split has occurred
+*   location:           This is the P location (From: new_node -> random P or key -> hashed -> deterministic (X, Y))
+*   keyValue:           Key value to store at location
 *   routingPurpose:     For next actions based on the purpose of finding a zone
 *   zone:               For zone assignment/querying
 * */
-case class Procedure[T](reference: Option[ActorRef[T]] = None,
+case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
                         visited: Option[List[ActorRef[Node.Command]]] = None,
                         neighborsToUpdate: Option[List[Neighbor]] = None,
-                        routingPurpose: Option[Procedure.routing_type] = None,
-                        zone: Option[Zone] = None, neighbor: Option[ActorRef[Node.Command]] = None
+                        neighbor: Option[ActorRef[Node.Command]] = None,
+                        key_value: Option[(String, String)] = None,
+                        location: Option[(Double, Double)] = None,
+                        reference: Option[ActorRef[T]] = None,
+                        zone: Option[Zone] = None,
                        ) {
   import Procedure.routing_type
 
-  def getNeighbor : Option[ActorRef[Node.Command]] = neighbor
-  def getZone : Option[Zone] = zone
-  def getReplyTo: Option[ActorRef[T]] = reference
-  def getRoutingPurpose: Option[routing_type] = routingPurpose
   def getNeighborsToUpdate: Option[List[Neighbor]] = neighborsToUpdate
+  def getRoutingPurpose: Option[routing_type] = routingPurpose
+  def getNeighbor : Option[ActorRef[Node.Command]] = neighbor
+  def getDHTpair: Option[(String, String)] = key_value
+  def getLocation: Option[(Double, Double)] = location
+  def getReplyTo: Option[ActorRef[T]] = reference
+  def getZone : Option[Zone] = zone
+
 
   def withNeighborsToUpdate(n: List[Neighbor]): Procedure[T] =
     this.copy(neighborsToUpdate = Some(n))
