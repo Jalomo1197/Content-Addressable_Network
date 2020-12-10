@@ -1,14 +1,23 @@
 package CAN
 
+import CAN.DNS.Command
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 
 
 object DNS{
-  def apply(): Behavior[Command] = Behaviors.setup(context => new DNS(context))
+  // Allowing one instances of chord actor for now.
+  private var DNS_Singleton: Option[DNS] = None
+  // Gets the Chord class
+  def getDNSActor: DNS = DNS_Singleton.get
+  // Apply function called by Chord(...)
+  def apply(): Behavior[Command] =
+    Behaviors.setup(context => {
+      DNS_Singleton = Some(new DNS(context))
+      DNS_Singleton.get
+    })
 
   trait Command
-
   case class bootstrap(p: Procedure[Node.Command]) extends Command
 }
 
@@ -16,15 +25,17 @@ class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Comma
   import DNS.bootstrap
   import Node.acquiredBootstrap
   import Bootstrap.initializeZones
+  var dictionary: Map[String, String] = Map.empty[String, String]
   var boots = 1
   var bootstraps: List[ActorRef[Bootstrap.Command]] = List(context.spawn(Bootstrap(), s"node-bootstrap-$boots"))
   bootstraps.head ! initializeZones
 
   override def onMessage(msg: DNS.Command): Behavior[DNS.Command] = {
-
     case bootstrap(procedure) =>
       procedure.getReplyTo.get ! acquiredBootstrap(Procedure[Bootstrap.Command]().withReference(bootstraps.head))
+      this
 
-    this
   }
+  /* User obtain ActorRef to Chord Singleton via User.getChordActor.getReference */
+  def getReference: ActorRef[Command] = context.self
 }
