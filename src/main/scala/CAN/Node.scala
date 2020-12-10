@@ -92,7 +92,8 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
         }
         else{
           // Closest neighbor to P (that has not been visited)
-
+          val closetNeighborToLocation = zone.closestPointToP(p)
+          val _p = p.wasVisited(context.self)
           context.log.info("CLOSEST NEIGHBOR NOT IMPLEMENTED")
         }
     }

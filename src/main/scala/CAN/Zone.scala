@@ -66,14 +66,14 @@ object Zone extends Enumeration {
     def containsP(P: (Double, Double)): Boolean =
       P._1 >= get_XRange._1 && P._1 <= get_XRange._2 && P._2 >= get_YRange._1 && P._2 <= get_YRange._2
 
-    def closestPointToP(procedure: Procedure[Node.Command]): (Double, Double) = {
-      val P: (Double, Double) = procedure.getLocation.get
+    def closestPointToP(procedure: Procedure[Node.Command]): List[ActorRef[Node.Command]] = {
       // Assume P not within zone
-
-      // Scan x-axis
-      if(closestX(P)) closestPointViaY(P)
-      // Scan y - axis
-      if(closestY(P)) closestPointViaX(P)
+      val P: (Double, Double) = procedure.getLocation.get
+      // Scan x-axis, If P's X value is within range
+      if(closestX(P))
+        closestPointViaY(P) // up or down
+      // Scan y - axis, If P's Y value is within range
+      if(closestY(P)) closestPointViaX(P) // left or right
       // Vertex
       if(P._1 > get_XRange._2 && P._2 > get_YRange._2) return topRight
       if(P._1 > get_XRange._2 && P._2 < get_YRange._1) return botRight
@@ -85,11 +85,15 @@ object Zone extends Enumeration {
     def closestX(P: (Double, Double)): Boolean =
       P._1 > get_XRange._1 && P._1 < get_XRange._2
 
-    def closestPointViaY(P: (Double, Double)): (Double, Double) =
+    def closestPointViaY(P: (Double, Double)): (Double, Double) = {
+      // up else down
       if(P._2 > get_YRange._2) (P._1, get_YRange._2) else (P._1, get_YRange._1)
+    }
 
-    def closestPointViaX(P: (Double, Double)): (Double, Double) =
+    def closestPointViaX(P: (Double, Double)): (Double, Double) = {
+      // right else left
       if(P._1 > get_XRange._2) (get_XRange._2, P._2) else (get_XRange._1, P._2)
+    }
 
     def closestY(P: (Double, Double)): Boolean =
       P._2 > get_YRange._1 && P._2 < get_YRange._2
