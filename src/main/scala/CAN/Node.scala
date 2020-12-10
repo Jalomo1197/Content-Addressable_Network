@@ -58,6 +58,7 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
       // Command to set this node's zone
       case setZone(p) =>
         zone = p.getZone.get
+        zone.setReference(context.self)
         context.log.info(s"NODE::ZONE: ${zone.formatZone} ZONE SET")
 
       // Command to set this node's neighbor IF POSSIBLE ONLY
