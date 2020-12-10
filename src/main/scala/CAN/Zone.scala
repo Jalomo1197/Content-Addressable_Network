@@ -67,7 +67,7 @@ object Zone extends Enumeration {
     *     1   | Up
     *     2   | Right
     *     3   | Down
-    */
+*/
     var zones: Array[Zone] = Array.fill(4)(Zone((0.0,0.0), (0.0,0.0)))
 
     def setZone(z: Zone, index: Int): Unit =
@@ -78,6 +78,7 @@ object Zone extends Enumeration {
 
     def setReference(occupant: ActorRef[Node.Command]): Unit =
       this.occupant = Some(occupant)
+
     // Ensures Fault Tolerance
     def getReference: Option[ActorRef[Node.Command]] =
       this.occupant
