@@ -51,6 +51,7 @@ class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Comma
         bootstraps.head ! insert(procedure)
 
       case keyLookup(procedure) =>
+        context.log.info(this.getClass + s" : Key Lookup(${procedure.getDHTpair.get}) => Bootstrap ")
         bootstraps.head ! keyLookup(procedure)
 
     }

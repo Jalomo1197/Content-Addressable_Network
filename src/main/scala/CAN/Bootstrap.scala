@@ -19,7 +19,7 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
   // Importing relevant commands
   import Node.{acquiredNodeInNetwork,findZone,setZone,initializeNeighbors}
   import Bootstrap._
-  import DNS.insert
+  import DNS.{insert, keyLookup}
   // List of up and running nodes in network
   var active_nodes: List[ActorRef[Node.Command]] = List.empty[ActorRef[Node.Command]]
 
@@ -37,11 +37,15 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
         new_node ! acquiredNodeInNetwork(Procedure[Node.Command]().withReference(nodeInNetwork))
         context.log.info(s"$thisPath: New Node Procedure :: acquiredNodeInNetwork(Procedure) => New Node")
 
-      /* For insertion of new (key, Value) into distributed map */
-      // TODO: change to one random node only, AFTER routing (Zone.closetToP) is completed
+      /* For insertion of new (key, Value) into distributed map
+        TODO: change to one random node only, AFTER routing (Zone.closetToP) is completed */
       case insert(p) =>
         active_nodes.foreach(a => a ! findZone (p))
         context.log.info(s"$thisPath: Insert ${p.getDHTpair.get} Procedure :: findZone(kv) => Node In Network")
+
+      case keyLookup(p) =>
+        active_nodes.foreach(a => a ! findZone (p))
+        context.log.info("$thisPath: Key Lookup DONE")
     }
     this
   }
