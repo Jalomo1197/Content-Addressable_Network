@@ -33,32 +33,39 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
   var distributedMap: Map[String, String] = Map()
 
   override def onMessage(msg: Node.Command): Behavior[Node.Command] = {
+
     // Procedure to adjust the first 4 nodes' neighbors
     case initializeNeighbors(nodes) =>
       nodes.foreach(n  => n ! getZone(Procedure[Node.Command]().withReference(context.self)))
       context.log.info(s"NODE::ZONE: ${zone.formatZone} REQUESTED ZONES OF OTHER INITIAL NODES")
+
     // Response from DNS, procedure contains a bootstrap node
     case acquiredBootstrap(p) =>
       p.getReplyTo.get ! getNodeInNetwork(Procedure[Node.Command]().withReference(context.self))
       context.log.info(s"NODE NODE REQUESTED A NODE IN CAN FROM BOOTSTRAP")
+
     // Response from a bootstrap node, procedure contains a active C.A.N. node
     case acquiredNodeInNetwork(p) =>
       p.getReplyTo.get ! findZone(Procedure[Node.Command]().withReference(context.self).withZone(zone))
       context.log.info(s"NODE NODE FIND_ZONE PROCEDURE SENT TO NODE IN CAN")
+
     // Query for this node's zone
     case getZone(p) =>
       p.getReplyTo.get ! setNeighbor(Procedure[Node.Command]().withNeighbor(context.self).withZone(zone))
       context.log.info(s"NODE::ZONE: ${zone.formatZone} SENT ZONE INFO")
+
     // Command to set this node's zone
     case setZone(p) =>
       zone = p.getZone.get
       context.log.info(s"NODE::ZONE: ${zone.formatZone} ZONE SET")
-    // Command to set this node's neighbor
+
+    // Command to set this node's neighbor IF POSSIBLE ONLY
     case setNeighbor(p) =>
       val neighborReference = p.getNeighbor.get
       val neighborZone = p.getZone.get
       zone.set_neighbor(neighborReference, neighborZone)
       context.log.info(s"NODE::ZONE: ${zone.formatZone} SETTING NEIGHBOR::ZONE: ${neighborZone.formatZone}")
+
     // Procedure to utilize routing algorithm, to find point P(x,y) in space
     case findZone(p) =>
       // Extracting info for cases KEY_LOOKUP and KEY_STORE
