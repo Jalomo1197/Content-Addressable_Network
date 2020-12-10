@@ -66,8 +66,10 @@ object Zone extends Enumeration {
     def containsP(P: (Double, Double)): Boolean =
       P._1 >= get_XRange._1 && P._1 <= get_XRange._2 && P._2 >= get_YRange._1 && P._2 <= get_YRange._2
 
-    def closestPointToP(P: (Double, Double)): (Double, Double) = {
+    def closestPointToP(procedure: Procedure[Node.Command]): (Double, Double) = {
+      val P: (Double, Double) = procedure.getLocation.get
       // Assume P not within zone
+
       // Scan x-axis
       if(closestX(P)) closestPointViaY(P)
       // Scan y - axis
@@ -78,6 +80,8 @@ object Zone extends Enumeration {
       if(P._1 < get_XRange._1 && P._2 < get_YRange._1) botLeft else topLeft
       // Check closest has not been visited
     }
+
+
     def closestX(P: (Double, Double)): Boolean =
       P._1 > get_XRange._1 && P._1 < get_XRange._2
 

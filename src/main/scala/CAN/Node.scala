@@ -92,6 +92,7 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
         }
         else{
           // Closest neighbor to P (that has not been visited)
+
           context.log.info("CLOSEST NEIGHBOR NOT IMPLEMENTED")
         }
     }
