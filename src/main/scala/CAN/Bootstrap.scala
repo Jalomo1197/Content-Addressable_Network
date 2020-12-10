@@ -9,9 +9,9 @@ object Bootstrap{
   def apply():  Behavior[Command] = Behaviors.setup(context => new Bootstrap(context))
 
   trait Command
-  // For setting up initial nodes when DNS is created
+  /* For setting up initial nodes when DNS is created */
   case class initializeZones() extends Command
-  // For new nodes that want access to an existing node in CAN
+  /* For new nodes that want access to an existing node in CAN */
   case class getNodeInNetwork(p: Procedure[Node.Command]) extends Command
 }
 // TODO: line 40 case insert(kv)
@@ -76,6 +76,7 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
   // To obtain arbitrary C.A.N. node within active_nodes
   def getRandomNode: ActorRef[Node.Command] = active_nodes(new Random().nextInt(active_nodes.length))
 
+  // Alias for context.self.path
   def thisPath: ActorPath = context.self.path
 }
 
