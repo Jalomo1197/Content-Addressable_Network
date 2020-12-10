@@ -1,6 +1,6 @@
 package CAN
 
-import CAN.Zone.{left, right, up, down, neighborTable}
+import CAN.Zone.{left, right, up, down}
 import Chord_Algo.Hash
 import akka.actor.typed.ActorRef
 import com.typesafe.config.ConfigFactory
@@ -10,7 +10,9 @@ object Zone extends Enumeration {
   val left, up, right, down = Value
 
   val m: Int = ConfigFactory.load("application.conf").getInt("matrix_size")
-  var neighborTable: Neighbors = Neighbors()
+  // 0 -> x
+  // 1 -> y
+
 
   def apply(X_range: (Double , Double), Y_range: (Double , Double)): Zone = new Zone(X_range, Y_range)
 
@@ -23,10 +25,15 @@ object Zone extends Enumeration {
     (X,Y)
   }
 
-
 }
+class Zone(X_range: (Double , Double), Y_range: (Double , Double)){
+  // Ordering: Split -> x then y
+  var split = 'x'
+  var neighborTable: Neighbors = Neighbors()
 
-class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
+  def setNeighborTable(index: Int, entry: Neighbor): Unit =
+    neighborTable.neighbors(index) = entry
+
   def get_XRange: (Double , Double) = X_range
   def get_YRange: (Double , Double) = Y_range
 
@@ -35,44 +42,74 @@ class Zone(X_range: (Double , Double), Y_range: (Double , Double)) {
     val y_range = get_YRange
     P._1 >= x_range._1 && P._1 <= x_range._2 && P._2 >= y_range._1 && P._2 <= y_range._2
   }
-  def identifyNeighborToPointP(P: (Double, Double)): Neighbor = {
-    // Four Corners
-    val Top_left: (Double, Double) = (get_XRange._1, get_YRange._2)
-    val Top_right: (Double, Double) = (get_XRange._2, get_YRange._2)
-    val Bot_left: (Double, Double) = (get_XRange._1, get_YRange._1)
-    val Bot_right: (Double, Double) = (get_XRange._2, get_YRange._1)
-    // Vertices Edge Cases
-    if(P == Top_left) if(neighborTable.neighbors(0).visited) return neighborTable.neighbors(0) else neighborTable.neighbors(1)
-    if(P == Top_right) if(neighborTable.neighbors(1).visited) return neighborTable.neighbors(1) else neighborTable.neighbors(2)
-    if(P == Bot_right) if(neighborTable.neighbors(2).visited) return neighborTable.neighbors(2) else neighborTable.neighbors(3)
-    if(P == Bot_left) if(neighborTable.neighbors(3).visited) return neighborTable.neighbors(3) else neighborTable.neighbors(4)
-    // Four middle points on each zone border
-    val left_mid: (Double, Double) = (Top_left._1, (Top_left._2 - Bot_left._2)/2)
-    val top_mid: (Double, Double) = ((Top_right._1 - Top_left._1)/2 ,Top_left._2)
-    val right_mid: (Double, Double) = (Top_right._1, (Top_right._2 - Bot_right._2)/2)
-    val bot_mid: (Double, Double) = ((Bot_right._1 - Bot_left._1)/2, Bot_left._2)
-    // shortest hop || Edge Cases (Edges of zone)
-    // Right Neighbor
-    else if(P._1 > top_mid._1 && 2*distance(P, right_mid) < (distance(P, Top_right) + distance(P, Bot_right)) || P._1 == right_mid._1) neighborTable.neighbors(2)
-    // Down Neighbor
-    else if(P._2 < left_mid._2 && 2*distance(P, bot_mid) < (distance(P, Bot_left) + distance(P, Bot_right)) || P._2 == bot_mid._2) neighborTable.neighbors(3)
-    // Left Neighbor
-    else if(P._1 < top_mid._1 && 2*distance(P, left_mid) < (distance(P, Top_left) + distance(P, Bot_left)) || P._1 == left_mid._1) neighborTable.neighbors(0)
-    // Up Neighbor
-    else if(P._2 > left_mid._2 && 2*distance(P, top_mid) < (distance(P, Top_left) + distance(P, Top_right)) || P._2 == top_mid._2) neighborTable.neighbors(1)
-    // P is completely in the middle (Right)
-    else neighborTable.neighbors(2)
+  def closestPointToP(P: (Double, Double)): (Double, Double) = {
+    P
+  }
+  def topLeft: (Double, Double) =
+    (get_XRange._1, get_YRange._2)
+  def topRight: (Double, Double) =
+    (get_XRange._2, get_YRange._2)
+  def botLeft: (Double, Double) =
+    (get_XRange._1, get_YRange._1)
+  def botRight: (Double, Double) =
+    (get_XRange._2, get_YRange._1)
+  // NeighborTable of Point P
+  def identifyNeighborsToPointP(P: (Double, Double)): Neighbors = {
+    // Identify Zone
+    neighborTable
+    // NeighborTable
   }
   def distance(P: (Double, Double), Q: (Double, Double)): Double =
     (P._2 - Q._2)/(P._1 - Q._1)
-  def splitZone(new_node: ActorRef[Node.Command]): Unit = {
 
+  def splitZone(new_node: ActorRef[Node.Command]): Unit = {
+    // Add zone to Procedure
+    //val zone: Unit = new_node ! Procedure[Node.Command]().getZone.get
+    var start = 0.0
+    var end = 0.0
+    var new_node_half = (0.0, 0.0)
+    var second_half = (0.0, 0.0)
+    var new_node_zone = Zone(new_node_half, second_half)
+    var current_node_zone = Zone(new_node_half, second_half)
+    if(split == 'x'){
+      start = get_XRange._1
+      end = get_XRange._2
+      //Divide Point P zone into two equal parts
+      new_node_half = (start, start + (end - start))
+      second_half = (start + (end - start), end)
+      // Set Zone for new Node
+      new_node_zone = Zone(new_node_half, get_YRange)
+      current_node_zone = Zone(second_half, get_YRange)
+      set_neighbor(new_node, new_node_zone)
+      // Split Ordering for next split
+      split = 'y'
+    }
+    else{
+      start = get_YRange._1
+      end = get_YRange._2
+      //Divide Point P zone into two equal parts
+      new_node_half = (start, start + (end - start))
+      second_half = (start + (end - start), end)
+      // Set Zone for new Node
+      new_node_zone = Zone(get_XRange, new_node_half)
+      current_node_zone = Zone(get_XRange, second_half)
+      // Split Ordering for next split
+      split = 'x'
+    }
+    // Update Neighbors for new node
+    new_node_zone.setNeighborTable(0, neighborTable.neighbors(0))
+    new_node_zone.setNeighborTable(1, neighborTable.neighbors(1))
+    // Joining Node (right neighbor) is current occupant
+    set_neighbor(new_node, current_node_zone)
+    new_node_zone.setNeighborTable(3, neighborTable.neighbors(3))
+    // Update (Left neighbor) of original occupant to new node
+    // How do I get occupant ActorRef?
   }
   def set_neighbor(node: ActorRef[Node.Command], zone: Zone): Unit = {
     val X_axis = zone.get_XRange
     val Y_axis = zone.get_YRange
-    val x = this.get_XRange
-    val y = this.get_YRange
+    val x = get_XRange
+    val y = get_YRange
     var direction = left
     var entry = Neighbor(node, (0, 0), direction)
     // Same Zone
