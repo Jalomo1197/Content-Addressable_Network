@@ -29,6 +29,7 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
   import Bootstrap.getNodeInNetwork
   // Zone for Actor is unset
   var zone: Zone = Zone((-1.0,-1.0),(-1.0,-1.0))
+  var distributedMap: Map[String, String] = Map()
 
   override def onMessage(msg: Node.Command): Behavior[Node.Command] = {
     // Procedure to adjust the first 4 nodes' neighbors
@@ -56,8 +57,10 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
         // identify purpose
         p.getRoutingPurpose.get match {
           case KEY_LOOKUP =>
-
+            // return key_value pair to user
           case KEY_STORE =>
+            val (key, value) = p.getDHTpair.get
+            distributedMap += (key -> value)
           case NEW_NODE =>
         }
         // Key loopup || split || keyInsert

@@ -29,6 +29,7 @@ case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
                         location: Option[(Double, Double)] = None,
                         reference: Option[ActorRef[T]] = None,
                         zone: Option[Zone] = None,
+                        user: Option[ActorRef[User.Command]] = None
                        ) {
   import Procedure.routing_type
 
@@ -39,7 +40,11 @@ case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
   def getKeyLookup: Option[String] = key_lookup
   def getLocation: Option[(Double, Double)] = location
   def getReplyTo: Option[ActorRef[T]] = reference
+  def getUser: Option[ActorRef[User.Command]] = user
   def getZone : Option[Zone] = zone
+
+  def withUser(u: ActorRef[User.Command]): Procedurep[T] =
+    this.copy(user = Some(u))
 
   def withKeyToFind(s: String):  Procedure[T] =
     this.copy(key_lookup = Some(s))
