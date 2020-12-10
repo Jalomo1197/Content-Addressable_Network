@@ -13,12 +13,12 @@ import scala.util.{Failure, Success}
 
 object Simulation {
   def main(args: Array[String]): Unit = {
-
+    // Insert config
     val system: ActorSystem[Driver.lookup] =
       ActorSystem(Driver(), "driver")
 
-    system ! Driver.lookup("Jumanji")
-    system ! Driver.lookup("FatheroftheBridePartII")
+    //system ! Driver.lookup("Jumanji")
+    //system ! Driver.lookup("FatheroftheBridePartII")
   }
 }
 
@@ -30,9 +30,8 @@ object Driver {
     Behaviors.setup { context =>
 
       val config: Config = ConfigFactory.load("simpleData.conf")
-      val configDictionary = config.as[Map[String, String]]("dictionary")
-      // Start DNS
       val DNS = context.spawn(DNS(), "DNS")
+      context.log.info("DNS Actor Created: " + DNS.path.name)
       // Sleep to Construct Nodes
       // used by 'time' method
       implicit val baseTime: Long = System.currentTimeMillis
@@ -45,8 +44,8 @@ object Driver {
         case Success(value) => println(s"Zones and nodes initialized! = $value")
         case Failure(e) => e.printStackTrace()
       }
-      // Spawn User
       val user = context.spawn(User(), "User")
+      context.log.info("User Actor Created: " + user.path.name)
       // InsertConfig
       user ! insertConfig(config)
       // Reply From Config
