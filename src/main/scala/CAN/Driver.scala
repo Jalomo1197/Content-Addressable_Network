@@ -1,15 +1,18 @@
 package CAN
 
+import java.lang.Thread.sleep
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorSystem, Behavior}
 import com.typesafe.config.ConfigFactory
 import net.ceedubs.ficus.Ficus._
 import com.typesafe.config.Config
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.util.{Failure, Success}
+
 object Simulation {
   def main(args: Array[String]): Unit = {
-    val config: Config = ConfigFactory.load("simpleData.conf")
-    val configDictionary = config.as[Map[String, String]]("dictionary")
 
     val system: ActorSystem[Driver.lookup] =
       ActorSystem(Driver(), "driver")
@@ -20,18 +23,39 @@ object Simulation {
 }
 
 object Driver {
-
+  import User.{insertConfig, queryResponse}
   final case class lookup(key: String)
 
   def apply(): Behavior[lookup] =
     Behaviors.setup { context =>
-      val DNS = context.spawn(DNS(), "CAN")
 
+      val config: Config = ConfigFactory.load("simpleData.conf")
+      val configDictionary = config.as[Map[String, String]]("dictionary")
+      // Start DNS
+      val DNS = context.spawn(DNS(), "DNS")
+      // Sleep to Construct Nodes
+      // used by 'time' method
+      implicit val baseTime: Long = System.currentTimeMillis
+      // 2 - create a Future
+      val f = Future {
+        sleep(100)
+      }
+      // Non-blocking
+      f.onComplete {
+        case Success(value) => println(s"Zones and nodes initialized! = $value")
+        case Failure(e) => e.printStackTrace()
+      }
+      // Spawn User
+      val user = context.spawn(User(), "User")
+      // InsertConfig
+      user ! insertConfig(config)
+      // Reply From Config
+      // Lookup
       Behaviors.receiveMessage { message =>
-        val replyTo = context.spawn(, message.key)
-        DNS ! D.keyLookup("MoneyTrain", replyTo)
-        val value = Some(Chord.getChordActor.dictionary(message.key))
-        replyTo ! User.queryResponse(message.key, value)
+        val replyTo = context.spawn(User(), message.key)
+        //user ! User.keyLookup("MoneyTrain", replyTo)
+        //val value = Some(DNS.getDNSActor.dictionary(message.key))
+        //replyTo ! User.queryResponse(message.key, value)
         Behaviors.same
       }
     }
