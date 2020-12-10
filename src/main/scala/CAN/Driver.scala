@@ -1,11 +1,10 @@
 package CAN
 
 import java.lang.Thread.sleep
+
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorSystem, Behavior}
-import com.typesafe.config.ConfigFactory
-import net.ceedubs.ficus.Ficus._
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -13,17 +12,15 @@ import scala.util.{Failure, Success}
 
 object Simulation {
   def main(args: Array[String]): Unit = {
-    // Insert config
-    val system: ActorSystem[Driver.lookup] =
-      ActorSystem(Driver(), "driver")
-
+    // Initialize zones and baby config file inserted into CAN
+    val system: ActorSystem[Driver.lookup] = ActorSystem(Driver(), "driver")
     //system ! Driver.lookup("Jumanji")
-    //system ! Driver.lookup("FatheroftheBridePartII")
+    //system ! Driver.lookup("Heat")
   }
 }
 
 object Driver {
-  import User.{insertConfig, queryResponse}
+  import User.insertConfig
   final case class lookup(key: String)
 
   def apply(): Behavior[lookup] =
@@ -48,13 +45,15 @@ object Driver {
       context.log.info("User Actor Created: " + user.path.name)
       // InsertConfig
       user ! insertConfig(config)
-      // Reply From Config
-      // Lookup
+
       Behaviors.receiveMessage { message =>
+        context.log.info("Ready for some key lookups" + user.path.name)
+        /*
         val replyTo = context.spawn(User(), message.key)
-        //user ! User.keyLookup("MoneyTrain", replyTo)
-        //val value = Some(DNS.getDNSActor.dictionary(message.key))
-        //replyTo ! User.queryResponse(message.key, value)
+        user ! User.keyLookup("MoneyTrain", replyTo)
+        val value = Some(DNS.getDNSActor.dictionary(message.key))
+        replyTo ! User.queryResponse(message.key, value)
+         */
         Behaviors.same
       }
     }
