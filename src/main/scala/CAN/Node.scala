@@ -27,6 +27,7 @@ object Node{
 class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Command](context){
   import Node._
   import Bootstrap.getNodeInNetwork
+  import User.{queryResponse, insertConfirmed}
   // Zone for Actor is unset
   var zone: Zone = Zone((-1.0,-1.0),(-1.0,-1.0))
   var distributedMap: Map[String, String] = Map()
@@ -55,15 +56,21 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
       // If point P is in this nodes zone
       if (zone.containsP(p.getLocation.get)) {
         // identify purpose
+        val user = p.getUser.get
         p.getRoutingPurpose.get match {
+
           case KEY_LOOKUP =>
             // return key_value pair to user
             val key = p.getKeyLookup.get
-            p.getUser.get ! keyResponse(key, distributedMap.getOrElse(key, "NOT FOUND"))
+            user ! queryResponse(key, distributedMap.get(key))
           case KEY_STORE =>
+
             val (key, value) = p.getDHTpair.get
             distributedMap += (key -> value)
+            user ! insertComfirmed((key, value))
+
           case NEW_NODE =>
+            context.log.info("NOT IMPLEMENTED")
         }
         // Key loopup || split || keyInsert
       }
