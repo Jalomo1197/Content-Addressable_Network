@@ -36,9 +36,11 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
         // Randomly choose node from bootstrap node
         val node = getRandomNode(active_nodes, new Random())
         p.getReplyTo.get ! acquiredNodeInNetwork(Procedure[Node.Command]().withReference(active_nodes.head))
+        context.log.info(this.getClass +" : getRandomNode(p) => ")
         this
       case insert(kv) =>
         active_nodes.foreach(a => a ! findZone (kv))
+        context.log.info(this.getClass +" : inserting(kv) => Node" + kv.toString)
         this
     }
   }
@@ -48,10 +50,10 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
 
     // init 16x16 conceptual grid into 4 coordinate planes ( + ) where center of + is ( x = 7, y = 7 )
     // Self defined circular coordinate plane ( + ) meaning List (1) would be top left, then (2) right, then (3) below 1 and 4 below 2
-    //    1 = (0,7),(0,7)
-    //    2 = (7,15),(0,7)
-    //    3 = (0,7),(7,15)
-    //    4 = 4 (7,15),(7,15)
+    //    1 = (0,7),(0,7)  -> (x,y) = (0,0),(7,7)
+    //    2 = (7,15),(0,7) -> (x,y) = (7,0),(15,7)
+    //    3 = (0,7),(7,15) -> (x,y) = (0,7),(7,15)
+    //    4 = (7,15),(7,15)-> (x,y) = (7,7),(15,15)
     var initialZones = List( Zone((0, 7), (0, 7)) , Zone((7, 15), (0, 7)), Zone((0, 7), (7, 15)), Zone((7, 15), (7, 15)))
 
     /* Spawn New Nodes */
