@@ -1,5 +1,6 @@
 package CAN
 
+import CAN.Procedure.{KEY_LOOKUP, KEY_STORE, NEW_NODE}
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 
@@ -53,6 +54,12 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
       // If point P is in this nodes zone
       if (zone.containsP(p.getLocation.get)) {
         // identify purpose
+        p.getRoutingPurpose.get match {
+          case KEY_LOOKUP =>
+
+          case KEY_STORE =>
+          case NEW_NODE =>
+        }
         // Key loopup || split || keyInsert
       }
       else{

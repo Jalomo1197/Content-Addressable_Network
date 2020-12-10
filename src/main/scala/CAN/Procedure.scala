@@ -23,6 +23,7 @@ case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
                         visited: Option[List[ActorRef[Node.Command]]] = None,
                         neighborsToUpdate: Option[List[Neighbor]] = None,
                         neighbor: Option[ActorRef[Node.Command]] = None,
+                        key_lookup: Option[String] = None,
                         key_value: Option[(String, String)] = None,
                         location: Option[(Double, Double)] = None,
                         reference: Option[ActorRef[T]] = None,
@@ -38,6 +39,8 @@ case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
   def getReplyTo: Option[ActorRef[T]] = reference
   def getZone : Option[Zone] = zone
 
+  def withKeyToFind(s: String):  Procedure[T] =
+    this.copy(key_lookup = Some(s))
 
   def withNeighborsToUpdate(n: List[Neighbor]): Procedure[T] =
     this.copy(neighborsToUpdate = Some(n))
