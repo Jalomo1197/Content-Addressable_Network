@@ -8,6 +8,7 @@ object DNS{
   def apply(): Behavior[Command] = Behaviors.setup(context => new DNS(context))
 
   trait Command
+
   case class bootstrap(p: Procedure[Node.Command]) extends Command
 }
 
