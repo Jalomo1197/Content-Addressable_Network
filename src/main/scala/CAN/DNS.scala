@@ -19,10 +19,11 @@ object DNS{
 
   trait Command
   case class bootstrap(p: Procedure[Node.Command]) extends Command
+  case class insert(p: Procedure[Node.Command]) extends Command with Bootstrap.Command
 }
 
 class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Command](context) {
-  import DNS.bootstrap
+  import DNS.{insert,bootstrap}
   import Node.acquiredBootstrap
   import Bootstrap.initializeZones
   var dictionary: Map[String, String] = Map.empty[String, String]
@@ -33,7 +34,14 @@ class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Comma
   override def onMessage(msg: DNS.Command): Behavior[DNS.Command] = {
     case bootstrap(procedure) =>
       procedure.getReplyTo.get ! acquiredBootstrap(Procedure[Bootstrap.Command]().withReference(bootstraps.head))
+
+    // DNS to Boot to Zone,
+    // for item in config file, we receive the (key,value) and send to bootstrap here.
+    case insert(procedure) =>
+      bootstraps.head ! insert(procedure)
+
       this
+
 
   }
   /* User obtain ActorRef to Chord Singleton via User.getChordActor.getReference */

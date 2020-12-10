@@ -17,7 +17,8 @@ object Bootstrap{
 
 class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavior[Bootstrap.Command](context){
   import Bootstrap._
-  import Node.acquiredNodeInNetwork
+  import Node.{acquiredNodeInNetwork,findZone}
+  import DNS.insert
 
   var zone_count = 0
   var active_nodes: List[ActorRef[Node.Command]] = List.empty[ActorRef[Node.Command]]
@@ -36,11 +37,21 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
         val node = getRandomNode(active_nodes, new Random())
         p.getReplyTo.get ! acquiredNodeInNetwork(Procedure[Node.Command]().withReference(active_nodes.head))
         this
+      case insert(kv) =>
+        active_nodes.foreach(a => a ! findZone (kv))
+        this
     }
   }
 
   def initializeNeighbors():Unit = {
     import Node.{setZone,initializeNeighbors}
+
+    // init 16x16 conceptual grid into 4 coordinate planes ( + ) where center of + is ( x = 7, y = 7 )
+    // Self defined circular coordinate plane ( + ) meaning List (1) would be top left, then (2) right, then (3) below 1 and 4 below 2
+    //    1 = (0,7),(0,7)
+    //    2 = (7,15),(0,7)
+    //    3 = (0,7),(7,15)
+    //    4 = 4 (7,15),(7,15)
     var initialZones = List( Zone((0, 7), (0, 7)) , Zone((7, 15), (0, 7)), Zone((0, 7), (7, 15)), Zone((7, 15), (7, 15)))
 
     /* Spawn New Nodes */
