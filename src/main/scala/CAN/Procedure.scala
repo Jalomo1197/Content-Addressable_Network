@@ -10,8 +10,15 @@ object Procedure extends Enumeration {
   val KEY_STORE, KEY_LOOKUP, NEW_NODE = Value
 }
 
+/*  A Procedure Instance can encapsulate the follow information
+*   reference:          For the next send or a reply to
+*   visited:            For book-keeping visited nodes
+*   neighborsToUpdate:  For updating node when a split has occurred
+*   routingPurpose:     For next actions based on the purpose of finding a zone
+*   zone:               For zone assignment/querying
+* */
 case class Procedure[T](reference: Option[ActorRef[T]] = None,
-                        visited: Option[List[ActorRef[Node.Command]]],
+                        visited: Option[List[ActorRef[Node.Command]]] = None,
                         neighborsToUpdate: Option[List[Neighbor]] = None,
                         routingPurpose: Option[Procedure.routing_type] = None,
                         zone: Option[Zone] = None, neighbor: Option[ActorRef[Node.Command]] = None
@@ -46,6 +53,8 @@ case class Procedure[T](reference: Option[ActorRef[T]] = None,
     }
   }
 
+  /*  To check if a neighbor was visited to then forward
+      or NOT forward depending on return value            */
   def wasVisited(v: ActorRef[Node.Command]): Boolean = {
     visited match {
       case Some(list) =>  list.contains(v)
