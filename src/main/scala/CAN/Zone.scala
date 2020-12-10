@@ -51,9 +51,30 @@ object Zone extends Enumeration {
     // Ordering: Split -> x then y
     var split = 'x'
     var neighborTable: Neighbors = Neighbors()
+    var occupant: Option[ActorRef[Node.Command]] = None
+    /*
+    *   Entry | Direction
+    *     0   | Left
+    *     1   | Up
+    *     2   | Right
+    *     3   | Down
+    */
+    var zones: Array[Zone] = Array.fill(4)(Zone((0.0,0.0), (0.0,0.0)))
+
+    def setZone(z: Zone, index: Int): Unit =
+      this.zones(index) = z
+
+    def bottomZone(): Zone =
+      zones(3)
+
+    def setReference(occupant: ActorRef[Node.Command]): Unit =
+      this.occupant = Some(occupant)
+    // Ensures Fault Tolerance
+    def getReference: Option[ActorRef[Node.Command]] =
+      this.occupant
 
     def setNeighborTable(index: Int, entry: Neighbor): Unit =
-      neighborTable.neighbors(index) = entry
+      this.neighborTable.neighbors(index) = entry
 
     def get_XRange: (Double, Double) = X_range
 
@@ -122,9 +143,12 @@ object Zone extends Enumeration {
         // Set Zone for new Node
         new_node_zone = Zone(new_node_half, get_YRange)
         current_node_zone = Zone(second_half, get_YRange)
-        // Update new_node right neighbor (original occupant)
+        // Assign neighbors of original occupant to new_node (Down, Left, Up)
+        set_neighbor(new_node, )
+        // Update new_node Right neighbor (original occupant)
         set_neighbor(new_node, current_node_zone)
-        // Update original occupant left neighbor (new_node)
+        // Update original occupant Left neighbor (new_node)
+        set_neighbor(getReference.get, new_node_zone)
         // Split Ordering for next split
         split = 'y'
       }
@@ -141,7 +165,7 @@ object Zone extends Enumeration {
         // Update new_node Top neighbor (original occupant)
         set_neighbor(new_node, current_node_zone)
         // Update original occupant left neighbor (new_node)
-
+        set_neighbor(getReference.get, new_node_zone)
         // Split Ordering for next split
         split = 'x'
       }
