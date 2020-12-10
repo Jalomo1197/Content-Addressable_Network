@@ -1,7 +1,6 @@
 package CAN
 
 import CAN.Zone.{left, right, up, down}
-import Chord_Algo.Hash
 import akka.actor.typed.ActorRef
 import com.typesafe.config.ConfigFactory
 
