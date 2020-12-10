@@ -27,8 +27,6 @@ object Zone extends Enumeration {
 
 }
 
-
-
   class Zone(X_range: (Double, Double), Y_range: (Double, Double)) {
     // Ordering: Split -> x then y
     var split = 'x'
@@ -47,7 +45,22 @@ object Zone extends Enumeration {
     }
 
     def closestPointToP(P: (Double, Double)): (Double, Double) = {
-      P
+      // Assume P not within zone
+      // Scan x-axis
+      if(P._1 > get_XRange._1 && P._1 < get_XRange._2){
+        // Check closest y
+         if(P._2 > get_YRange._2) return (P._1, get_YRange._2) else return (P._1, get_YRange._1)
+      }
+      // Scan y - axis
+      if(P._2 > get_YRange._1 && P._2 < get_YRange._2){
+        // Check closest X
+        if(P._1 > get_XRange._2) return (get_XRange._2, P._2) else return (get_XRange._1, P._2)
+      }
+      // Vertex
+      if(P._1 > get_XRange._2 && P._2 > get_YRange._2) return topRight
+      if(P._1 > get_XRange._2 && P._2 < get_YRange._1) return botRight
+      if(P._1 < get_XRange._1 && P._2 < get_YRange._1) botLeft else topLeft
+      // Check closest has not been visited
     }
 
     def topLeft: (Double, Double) =
@@ -81,6 +94,7 @@ object Zone extends Enumeration {
       var second_half = (0.0, 0.0)
       var new_node_zone = Zone(new_node_half, second_half)
       var current_node_zone = Zone(new_node_half, second_half)
+      // Split in x direction
       if (split == 'x') {
         start = get_XRange._1
         end = get_XRange._2
@@ -90,10 +104,10 @@ object Zone extends Enumeration {
         // Set Zone for new Node
         new_node_zone = Zone(new_node_half, get_YRange)
         current_node_zone = Zone(second_half, get_YRange)
-        set_neighbor(new_node, current_node_zone)
         // Split Ordering for next split
         split = 'y'
       }
+      // Split in y direction
       else {
         start = get_YRange._1
         end = get_YRange._2
