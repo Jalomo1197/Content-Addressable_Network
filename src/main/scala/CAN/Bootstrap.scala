@@ -29,7 +29,7 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
     msg match {
 
       case initializeZones =>
-        initializeNeighbors()
+        initializeNeighborsFromBoot()
         this.zone_count += 4
         this
       case getNodeInNetwork(p) =>
@@ -45,7 +45,7 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
     }
   }
 
-  def initializeNeighbors():Unit = {
+  def initializeNeighborsFromBoot():Unit = {
     import Node.{setZone,initializeNeighbors}
 
     // init 16x16 conceptual grid into 4 coordinate planes ( + ) where center of + is ( x = 7, y = 7 )

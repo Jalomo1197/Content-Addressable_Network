@@ -32,16 +32,20 @@ class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Comma
   bootstraps.head ! initializeZones
 
   override def onMessage(msg: DNS.Command): Behavior[DNS.Command] = {
-    case bootstrap(procedure) =>
-      context.log.info(this.getClass +" : acquiredBootsrap(procedure) => Bootstrap")
-      procedure.getReplyTo.get ! acquiredBootstrap(Procedure[Bootstrap.Command]().withReference(bootstraps.head))
+    msg match {
+      case bootstrap(procedure) =>
+        context.log.info(this.getClass +" : acquiredBootsrap(procedure) => Bootstrap")
+        procedure.getReplyTo.get ! acquiredBootstrap(Procedure[Bootstrap.Command]().withReference(bootstraps.head))
+        this
 
-    // DNS to Boot to Zone,
-    // for item in config file, we receive the (key,value) and send to bootstrap here.
-    case insert(procedure) =>
-      context.log.info(this.getClass +" : inserting(procedure) => Bootstrap ")
-      bootstraps.head ! insert(procedure)
-      this
+      // DNS to Boot to Zone,
+      // for item in config file, we receive the (key,value) and send to bootstrap here.
+      case insert(procedure) =>
+        context.log.info(this.getClass +" : inserting(procedure) => Bootstrap ")
+        bootstraps.head ! insert(procedure)
+        this
+    }
+
   }
   /* User obtain ActorRef to Chord Singleton via User.getChordActor.getReference */
   def getReference: ActorRef[Command] = context.self

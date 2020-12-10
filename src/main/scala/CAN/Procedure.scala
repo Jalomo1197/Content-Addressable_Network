@@ -43,7 +43,7 @@ case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
   def getUser: Option[ActorRef[User.Command]] = user
   def getZone : Option[Zone] = zone
 
-  def withUser(u: ActorRef[User.Command]): Procedurep[T] =
+  def withUser(u: ActorRef[User.Command]): Procedure[T] =
     this.copy(user = Some(u))
 
   def withKeyToFind(s: String):  Procedure[T] =
