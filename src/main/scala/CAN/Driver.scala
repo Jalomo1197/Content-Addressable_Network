@@ -27,7 +27,7 @@ object Driver {
     Behaviors.setup { context =>
 
       val config: Config = ConfigFactory.load("simpleData.conf")
-      val DNS = context.spawn(DNS(), "DNS")
+      val DNS = context.spawn(CAN.DNS.getDNSActor, "DNS")
       context.log.info("DNS Actor Created: " + DNS.path.name)
       // Sleep to Construct Nodes
       // used by 'time' method
