@@ -12,15 +12,20 @@ object Procedure extends Enumeration {
 
 case class Procedure[T](reference: Option[ActorRef[T]] = None,
                         visited: Option[List[ActorRef[Node.Command]]],
+                        neighborsToUpdate: Option[List[Neighbor]] = None,
                         routingPurpose: Option[Procedure.routing_type] = None,
                         zone: Option[Zone] = None, neighbor: Option[ActorRef[Node.Command]] = None
                        ) {
   import Procedure.routing_type
 
-
   def getNeighbor : Option[ActorRef[Node.Command]] = neighbor
   def getZone : Option[Zone] = zone
   def getReplyTo: Option[ActorRef[T]] = reference
+  def getRoutingPurpose: Option[routing_type] = routingPurpose
+  def getNeighborsToUpdate: Option[List[Neighbor]] = neighborsToUpdate
+
+  def withNeighborsToUpdate(n: List[Neighbor]): Procedure[T] =
+    this.copy(neighborsToUpdate = Some(n))
 
   def withRoutingPurpose(rp: routing_type): Procedure[T] =
     this.copy(routingPurpose = Some(rp))
@@ -34,11 +39,17 @@ case class Procedure[T](reference: Option[ActorRef[T]] = None,
   def withZone(z: Zone): Procedure[T] =
     this.copy(zone = Some(z))
 
-  def withVisited(v: ActorRef[Node.Command]): Procedure[T] ={
+  def withVisited(v: ActorRef[Node.Command]): Procedure[T] = {
     visited match {
-      case Some(list) =>  this.copy( visited = Some(v :: visited.get) )
+      case Some(list) =>  this.copy( visited = Some(v :: list) )
       case None =>        this.copy( visited = Some(List(v)) )
     }
   }
 
+  def wasVisited(v: ActorRef[Node.Command]): Boolean = {
+    visited match {
+      case Some(list) =>  list.contains(v)
+      case None =>        false
+    }
+  }
 }
