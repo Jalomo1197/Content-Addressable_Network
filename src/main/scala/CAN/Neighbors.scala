@@ -1,6 +1,6 @@
 package CAN
 
-import direction.{up, left, right, down}
+import Zone.up
 
 object Neighbors{
   def apply(): Neighbors = new Neighbors()
