@@ -70,6 +70,8 @@ object Zone extends Enumeration {
 
     def get_YRange: (Double, Double) = Y_range
 
+    def formatZone: String = s"X Range: $X_range Y Range: $Y_range"
+
     def containsP(P: (Double, Double)): Boolean = {
       val x_range = get_XRange
       val y_range = get_YRange
