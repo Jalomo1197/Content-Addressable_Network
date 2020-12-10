@@ -18,7 +18,9 @@ object User{
 
 class User(context: ActorContext[User.Command]) extends AbstractBehavior[User.Command](context) {
   import User._
-  val chord: ActorRef[CAN.DNS.Command] = DNS.getDNSActor.getReference
+  import DNS.insert
+  import Procedure.{KEY_STORE, KEY_LOOKUP}
+  val dns: ActorRef[CAN.DNS.Command] = DNS.getDNSActor.getReference
   var dictionary: Map[String, String] = Map.empty[String, String]
 
   override def onMessage(msg: Command): Behavior[User.Command] = {
@@ -27,6 +29,8 @@ class User(context: ActorContext[User.Command]) extends AbstractBehavior[User.Co
       case insertConfig(config) =>
         // Creating dictionary defined in config file: application.conf
         dictionary = config.as[Map[String, String]]("dictionary")
+        // For each dictionary send message to insert on message
+        // Procedure => wUser(context.self)wKeyValueToStore(item)wLocationZone.findLocation(key)wRoutingPurposeKeyStore()
       case queryResponse(key, value) =>
         value match {
           case None =>
