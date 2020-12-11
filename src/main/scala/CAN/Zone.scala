@@ -1,9 +1,7 @@
 package CAN
 
-import CAN.Zone.{Down, Left, Right, Up, default}
 import akka.actor.typed.ActorRef
 import com.typesafe.config.ConfigFactory
-import javax.print.attribute.standard.DialogOwner
 
 object Zone extends Enumeration {
   type direction = Value
@@ -83,17 +81,6 @@ object Zone extends Enumeration {
     /** Updates a neighbor entry of the nodes that owns the zone */
     def setNeighborTable(index: Int, entry: Neighbor): Unit = this.neighborTable.neighbors(index) = entry
     /** Returns: X-axis range of zone */
-    def setReference(occupant: ActorRef[Node.Command]): Unit =
-      this.occupant = Some(occupant)
-
-    // Ensures Fault Tolerance
-    def getReference: Option[ActorRef[Node.Command]] =
-      this.occupant
-
-
-    def setNeighborTable(index: Int, entry: Neighbor): Unit =
-      this.neighborTable.neighbors(index) = entry
-
     def get_XRange: (Double, Double) = X_range
     /** Returns: Y-axis range of zone*/
     def get_YRange: (Double, Double) = Y_range
