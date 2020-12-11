@@ -40,11 +40,13 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
       /* For insertion of new (key, Value) into distributed map
         TODO: change to one random node only, AFTER routing (Zone.closetToP) is completed */
       case insert(p) =>
-        active_nodes.foreach(a => a ! findZone (p))
+        active_nodes.head !  findZone(p)
+        //active_nodes.foreach(a => a ! findZone (p))
         context.log.info(s"$thisPath: Insert ${p.getDHTpair.get} Procedure :: findZone(kv) => Node In Network")
 
       case keyLookup(p) =>
-        active_nodes.foreach(a => a ! findZone (p))
+        active_nodes.head !  findZone(p)
+        //active_nodes.foreach(a => a ! findZone (p))
         context.log.info("$thisPath: Key Lookup DONE")
     }
     this

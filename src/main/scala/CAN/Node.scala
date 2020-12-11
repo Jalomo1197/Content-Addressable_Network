@@ -61,7 +61,8 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
       // Command to set this node's zone
       case setZone(p) =>
         zone = p.getZone.get
-        zone.setReference(context.self)
+
+       /* zone.setReference(context.self)
         var i = 0
         val occupant = zone.getReference.get
         // Update node Neighbors
@@ -71,7 +72,7 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
           zone.neighborTable.neighbors.withFilter(_ != Neighbor(null, (0,0), default)).foreach(n => {
             setNeighbor(Procedure[Node.Command]().withNeighbor(n.getNode).withZone(zone))
           })
-        }
+        }*/
 
         context.log.info(s"NODE::ZONE: ${zone.formatZone} ZONE SET")
 
@@ -122,8 +123,10 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
         }
         else{
           // Closest neighbors to P (that has not been visited)
+
           val closetNeighborsToLocation = zone.closestPointToP(p)
           if (closetNeighborsToLocation.nonEmpty) {
+            context.log.info(s"NODE::ZONE: ANYTHING")
             closetNeighborsToLocation.head ! findZone(p.withVisited(context.self))
             context.log.info(s"NODE::ZONE: ${zone.formatZone} DOES NOT CONTAIN LOCATION: $location. FORWARDING PROCEDURE")
           }
