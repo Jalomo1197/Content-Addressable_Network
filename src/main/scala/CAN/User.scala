@@ -10,6 +10,8 @@ object User{
     Behaviors.setup(new User(_))
 
   trait Command
+
+ //final case class insert(key: String, value: Option[String]) extends Command
   final case class queryResponse(key: String, value: Option[String]) extends Command
   // Insert (K, V) pairs from config
   final case class insertConfig(config: Config) extends Command

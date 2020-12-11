@@ -29,7 +29,8 @@ case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
                         location: Option[(Double, Double)] = None,
                         reference: Option[ActorRef[T]] = None,
                         zone: Option[Zone] = None,
-                        user: Option[ActorRef[User.Command]] = None
+                        user: Option[ActorRef[User.Command]] = None,
+                        split: Option[(ActorRef[Node.Command], ActorRef[Node.Command])] = None
                        ) {
   import Procedure.routing_type
 
@@ -42,6 +43,7 @@ case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
   def getReplyTo: Option[ActorRef[T]] = reference
   def getUser: Option[ActorRef[User.Command]] = user
   def getZone : Option[Zone] = zone
+  def getSplit : Option[(ActorRef[Node.Command], ActorRef[Node.Command])] = split
 
   def withUser(u: ActorRef[User.Command]): Procedure[T] =
     this.copy(user = Some(u))
@@ -69,6 +71,9 @@ case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
 
   def withZone(z: Zone): Procedure[T] =
     this.copy(zone = Some(z))
+
+  def withOccupant(split: (ActorRef[Node.Command], ActorRef[Node.Command])): Procedure[T] =
+    this.copy(split = Some(split))
 
   def withVisited(v: ActorRef[Node.Command]): Procedure[T] = {
     visited match {
