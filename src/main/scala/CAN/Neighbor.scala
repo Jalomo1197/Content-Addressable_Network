@@ -7,6 +7,7 @@ object Neighbor{
 }
 class Neighbor(var node: ActorRef[Node.Command], var range: (Double, Double), var direction: Zone.direction) {
   var visited = false
+
   def setVisited(): Unit =
     this.visited = true
   def setNode(node: ActorRef[Node.Command]): Unit =
