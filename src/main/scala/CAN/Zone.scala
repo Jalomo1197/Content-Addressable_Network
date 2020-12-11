@@ -183,7 +183,7 @@ object Zone extends Enumeration {
         //Divide Point P zone into two equal parts
         new_node_half = (start, start + (end - start))
         second_half = (start + (end - start), end)
-        // Set Zone for new Node
+        // Set Zone for new Node (setZone)
         new_node_zone = Zone(new_node_half, get_YRange)
         current_node_zone = Zone(second_half, get_YRange)
         // Assign neighbors of original occupant to new_node (Down, Left, Up)
