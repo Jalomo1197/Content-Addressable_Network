@@ -76,30 +76,50 @@ object Zone extends Enumeration {
     def bottomZone(): Zone =
       zones(3)
 
-    def setReference(occupant: ActorRef[Node.Command]): Unit =
-      this.occupant = Some(occupant)
-
-    // Ensures Fault Tolerance
-    def getReference: Option[ActorRef[Node.Command]] =
-      this.occupant
-
-
-    def setNeighborTable(index: Int, entry: Neighbor): Unit =
-      this.neighborTable.neighbors(index) = entry
-
+    /** Sets reference to node that owns the defined zone */
+    def setReference(occupant: ActorRef[Node.Command]): Unit = this.occupant = Some(occupant)
+    /** Returns: Actor Reference. Ensures Fault Tolerance */
+    def getReference: Option[ActorRef[Node.Command]] = this.occupant
+    /** Updates a neighbor entry of the nodes that owns the zone */
+    def setNeighborTable(index: Int, entry: Neighbor): Unit = this.neighborTable.neighbors(index) = entry
+    /** Returns: X-axis range of zone */
     def get_XRange: (Double, Double) = X_range
-
+    /** Returns: Y-axis range of zone*/
     def get_YRange: (Double, Double) = Y_range
-
+    /** Returns: formatted string of the defined zone */
     def formatZone: String = s"X Range: $X_range Y Range: $Y_range"
+    /** Returns: Boolean signifying if P is in the defined zone */
+    def containsP(P: (Double, Double)): Boolean = P._1 >= get_XRange._1 && P._1 <= get_XRange._2 && P._2 >= get_YRange._1 && P._2 <= get_YRange._2
 
-    def containsP(P: (Double, Double)): Boolean =
-      P._1 >= get_XRange._1 && P._1 <= get_XRange._2 && P._2 >= get_YRange._1 && P._2 <= get_YRange._2
 
+    /** Returns Boolean
+     * Check if P's Y value is in this nodes YRange */
+    def P_In_YRange(P: (Double, Double)): Boolean = get_YRange._1 < P._2 && P._2 < get_YRange._2
+    /** Return Boolean
+     * Check if P's X value is in this nodes XRange */
+    def P_In_XRange(P: (Double, Double)): Boolean = get_XRange._1 < P._1 && P._1 < get_XRange._2
+    /** Returns Direction
+     * Find direction to rout. P's X value is in this nodes X range,
+     * while P's Y value is in this nodes Y range. Next node is either UP or DOWN */
+    def optimal_YDirection(P: (Double, Double)): Zone.direction = if(P._2 > get_YRange._2)  Up else  Down
+    /** Returns Direction
+     * Find direction to rout. P's Y value is in this nodes Y range,
+     * while P's X value is in this nodes X range. Next node is either LEFT or RIGHT */
+    def optimal_XDirection(P: (Double, Double)): Zone.direction = if (P._1 > get_XRange._2) Right else Left
+
+
+    /* Theses functions return Booleans. To determine optimal paths for forwarding Procedure */
+    def P_towardsTopLeft(P: (Double, Double)): Boolean = P._1 < get_XRange._1 && P._2 > get_YRange._2
+    def P_towardsTopRight(P: (Double, Double)): Boolean = get_XRange._2 < P._1 && get_YRange._2 < P._2
+    def P_towardsBottomLeft(P: (Double, Double)): Boolean = P._1 < get_XRange._1 && P._2 < get_YRange._1
+    def P_towardsBottomRight(P: (Double, Double)): Boolean = get_XRange._2 < P._1 && P._2 < get_YRange._1
+
+
+    /** Returns a list of optimal neighbors to forward procedure */
     def closestPointToP(procedure: Procedure[Node.Command]): List[ActorRef[Node.Command]] = {
       // If this function is executed, P was not in this node's zone
       val P: (Double, Double) = procedure.getLocation.get
-
+      // If in one of this nodes ranges, optimal forward is only one node
       if(P_In_XRange(P)) {
         val dir = optimal_YDirection(P)
         val neighbor = neighborTable.neighbors(dir.id).getNode
@@ -112,48 +132,29 @@ object Zone extends Enumeration {
         if (neighbor != null && !procedure.wasVisited(neighbor))
           List(neighbor)
       }
-      // Vertex
-     // if(P._1 > get_XRange._2 && P._2 > get_YRange._2) return topRight
-     // if(P._1 > get_XRange._2 && P._2 < get_YRange._1) return botRight
-     // if(P._1 < get_XRange._1 && P._2 < get_YRange._1) botLeft else topLeft
-      // Check closest has not been visited
-      List()
+      // We are finding optimal neighbors to forward the procedure (Min: 1, Max: 0)
+      var validNeighborsToForward: List[ActorRef[Node.Command]] = List()
+      if (P_towardsTopRight(P)){
+        validNeighborsToForward +:= neighborTable.neighbors(Up.id).getNode
+        validNeighborsToForward +:= neighborTable.neighbors(Right.id).getNode
+      }
+      else if (P_towardsBottomRight(P)){
+        validNeighborsToForward +:= neighborTable.neighbors(Down.id).getNode
+        validNeighborsToForward +:= neighborTable.neighbors(Right.id).getNode
+      }
+      else if (P_towardsBottomLeft(P)){
+        validNeighborsToForward +:= neighborTable.neighbors(Left.id).getNode
+        validNeighborsToForward +:= neighborTable.neighbors(Down.id).getNode
+      }
+      else if (P_towardsTopLeft(P)){
+        validNeighborsToForward +:= neighborTable.neighbors(Up.id).getNode
+        validNeighborsToForward +:= neighborTable.neighbors(Left.id).getNode
+      }
+      // Filtering none existing neighbors (Because we might be at the edge of the space defined)
+      // & Filtering already visited neighbors
+      validNeighborsToForward.filter( n => n != null && !procedure.wasVisited(n))
     }
 
-    /** Returns Boolean
-     * Check if P's Y value is in this nodes YRange */
-    def P_In_YRange(P: (Double, Double)): Boolean = get_YRange._1 < P._2 && P._2 < get_YRange._2
-
-    /** Return Boolean
-     * Check if P's X value is in this nodes XRange */
-    def P_In_XRange(P: (Double, Double)): Boolean = get_XRange._1 < P._1 && P._1 < get_XRange._2
-
-    /** Returns Direction
-     * Find direction to rout. P's X value is in this nodes X range,
-     * while P's Y value is in this nodes Y range. Next node is either UP or DOWN */
-    def optimal_YDirection(P: (Double, Double)): Zone.direction = if(P._2 > get_YRange._2)  Up else  Down
-
-    /** Returns Direction
-     * Find direction to rout. P's Y value is in this nodes Y range,
-     * while P's X value is in this nodes X range. Next node is either LEFT or RIGHT */
-    def optimal_XDirection(P: (Double, Double)): Zone.direction = if (P._1 > get_XRange._2) Right else Left
-    
-    
-
-    def topLeft: (Double, Double) =
-      (get_XRange._1, get_YRange._2)
-
-    def topRight: (Double, Double) =
-      (get_XRange._2, get_YRange._2)
-
-    def botLeft: (Double, Double) =
-      (get_XRange._1, get_YRange._1)
-
-    def botRight: (Double, Double) =
-      (get_XRange._2, get_YRange._1)
-
-    def distance(P: (Double, Double), Q: (Double, Double)): Double =
-      (P._2 - Q._2) / (P._1 - Q._1)
 
     def splitZone(new_node: ActorRef[Node.Command]): Unit = {
       // Add zone to Procedure
