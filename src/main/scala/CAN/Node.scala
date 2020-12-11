@@ -94,14 +94,18 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
               // BOTH newNode & this node:
               //    every_neighbor <- setNeighbor(myRef, myZone)
               // this node
-              context.log.info("SPLIT NOT IMPLEMENTED")
+              context.log.warn("SPLIT NOT IMPLEMENTED")
           }
         }
         else{
-          // Closest neighbor to P (that has not been visited)
-          val closetNeighborToLocation = zone.closestPointToP(p)
-          val _p = p.wasVisited(context.self)
-          context.log.info("CLOSEST NEIGHBOR NOT IMPLEMENTED")
+          // Closest neighbors to P (that has not been visited)
+          val closetNeighborsToLocation = zone.closestPointToP(p)
+          if (closetNeighborsToLocation.nonEmpty) {
+            closetNeighborsToLocation.head ! findZone(p.withVisited(context.self))
+            context.log.info(s"NODE::ZONE: ${zone.formatZone} DOES NOT CONTAIN LOCATION: $location. FORWARDING PROCEDURE")
+          }
+          else
+            context.log.warn(s"ROUTING TO P:$location FAIL. NO OPTIMAL PROCEDURE FORWARDING")
         }
     }
     this
