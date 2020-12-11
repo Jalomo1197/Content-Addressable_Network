@@ -62,6 +62,7 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
       case setZone(p) =>
         zone = p.getZone.get
         zone.setReference(context.self)
+        /*
         var i = 0
         val occupant = zone.getReference.get
         // Update node Neighbors
@@ -72,6 +73,7 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
             setNeighbor(Procedure[Node.Command]().withNeighbor(n.getNode).withZone(zone))
           })
         }
+         */
         context.log.info(s"NODE::ZONE: ${zone.formatZone} ZONE SET")
 
       // Command to set this node's neighbor IF POSSIBLE ONLY
