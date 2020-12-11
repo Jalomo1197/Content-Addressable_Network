@@ -1,6 +1,7 @@
 package CAN
 
 import CAN.Procedure.{KEY_LOOKUP, KEY_STORE, NEW_NODE}
+import CAN.Zone.default
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 
@@ -22,6 +23,8 @@ object Node{
   case class initializeNeighbors(n: List[ActorRef[Node.Command]]) extends Command
   // Beginning of routing to find zone
   case class findZone(p: Procedure[Node.Command]) extends Command
+  // Command to set a neighbor if valid zone
+  case class split(p: Procedure[Node.Command]) extends Command
 }
 
 class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Command](context){
@@ -59,6 +62,17 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
       case setZone(p) =>
         zone = p.getZone.get
         zone.setReference(context.self)
+        var i = 0
+        val occupant = zone.getReference.get
+        // Update node Neighbors
+        val new_node = p.getReplyTo.get
+        new_node ! setZone(p.withZone(zone.splitZone(context.self)).withOccupant((occupant, new_node)).split()
+        if(p.getRoutingPurpose.get == NEW_NODE){
+          zone.neighborTable.neighbors.withFilter(_ != Neighbor(null, (0,0), default)).foreach(n => {
+            setNeighbor(Procedure[Node.Command]().withNeighbor(n.getNode).withZone(zone))
+          })
+        }
+
         context.log.info(s"NODE::ZONE: ${zone.formatZone} ZONE SET")
 
       // Command to set this node's neighbor IF POSSIBLE ONLY
@@ -67,6 +81,11 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
         val neighborZone = p.getZone.get
         zone.set_neighbor(neighborReference, neighborZone)
         context.log.info(s"NODE::ZONE: ${zone.formatZone} SETTING NEIGHBOR::ZONE: ${neighborZone.formatZone}")
+
+      // New Node inserted during congestion
+      case split(p) =>
+        zone.splitZone(context.self)
+        context.log.info("Split completed!\nNode : " + context.self.path.name + " inserted")
 
       // Procedure to utilize routing algorithm, to find point P(x,y) in space
       case findZone(p) =>
@@ -82,19 +101,22 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
               val value = distributedMap.get(key)
               user ! queryResponse(key, distributedMap.get(key))
               context.log.info(s"FOUND KEY: $key LOCATION: $location ZONE: ${zone.formatZone} RETURNING: ${(key, value)}")
+
             case KEY_STORE =>
               val (key, value) = p.getDHTpair.get
               distributedMap += (key -> value)
               user ! insertConfirmed(key, value)
               context.log.info(s"($key , $value) WITH LOCATION $location STORED IN ZONE: ${zone.formatZone} ")
+
             case NEW_NODE =>
+              p.getReplyTo.get ! split(Procedure[Node.Command]().withReference(context.self))
+              context.log.info("Splitting Zone with Node: " + context.self.path.name)
               // split(procedure) [newNode, Location] :
               //    newNode <- NewZONE , ThisZoneMOD, ThisRef, Neighbors, KEY_VALUE that are not mine (hash keys and extract)
               //
               // BOTH newNode & this node:
               //    every_neighbor <- setNeighbor(myRef, myZone)
               // this node
-              context.log.info("SPLIT NOT IMPLEMENTED")
           }
         }
         else{

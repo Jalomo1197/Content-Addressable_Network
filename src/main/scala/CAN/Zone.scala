@@ -83,6 +83,17 @@ object Zone extends Enumeration {
     /** Updates a neighbor entry of the nodes that owns the zone */
     def setNeighborTable(index: Int, entry: Neighbor): Unit = this.neighborTable.neighbors(index) = entry
     /** Returns: X-axis range of zone */
+    def setReference(occupant: ActorRef[Node.Command]): Unit =
+      this.occupant = Some(occupant)
+
+    // Ensures Fault Tolerance
+    def getReference: Option[ActorRef[Node.Command]] =
+      this.occupant
+
+
+    def setNeighborTable(index: Int, entry: Neighbor): Unit =
+      this.neighborTable.neighbors(index) = entry
+
     def get_XRange: (Double, Double) = X_range
     /** Returns: Y-axis range of zone*/
     def get_YRange: (Double, Double) = Y_range
@@ -176,7 +187,7 @@ object Zone extends Enumeration {
         new_node_zone = Zone(new_node_half, get_YRange)
         current_node_zone = Zone(second_half, get_YRange)
         // Assign neighbors of original occupant to new_node (Down, Left, Up)
-        set_neighbor(new_node, )
+        //set_neighbor(new_node, )
         // Update new_node Right neighbor (original occupant)
         set_neighbor(new_node, current_node_zone)
         // Update original occupant Left neighbor (new_node)
