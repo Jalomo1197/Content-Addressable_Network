@@ -16,18 +16,28 @@ object User{
   // Insert (K, V) pairs from config
   final case class insertConfig(config: Config) extends Command
   case class insertConfirmed(key: String, value: String) extends Command
+  // Used to search movie titiles
+  final case class lookup(key: String) extends Command with DNS.Command with Bootstrap.Command
 }
 
 
 class User(context: ActorContext[User.Command]) extends AbstractBehavior[User.Command](context) {
   import User._
-  import DNS.insert
+  import DNS.{insert, keyLookup}
   import Procedure.{KEY_STORE, KEY_LOOKUP}
   val dns: ActorRef[DNS.Command] = DNS.getDNSActor.connectToDNS
   var dictionary: Map[String, String] = Map.empty[String, String]
 
   override def onMessage(msg: Command): Behavior[User.Command] = {
     msg match {
+
+      case lookup(key) =>
+        dns ! keyLookup(Procedure[Node.Command]()
+          .withKeyToFind(key)
+          .withLocation(Zone.findLocation(key))
+          .withRoutingPurpose(KEY_LOOKUP)
+          .withUser(context.self))
+
       // Insert (K, V) pairs from config
       case insertConfig(config) =>
         // Creating dictionary defined in config file: application.conf
