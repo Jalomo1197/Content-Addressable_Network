@@ -31,6 +31,7 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
   import Bootstrap.getNodeInNetwork
   import User.{queryResponse, insertConfirmed}
   // Zone for Actor is unset
+  var nodeSpawns = 0
   var zone: Zone = Zone((-1.0,-1.0),(-1.0,-1.0))
   var distributedMap: Map[String, String] = Map()
   context.log.info(s"NODE CREATED: ${context.self.path}")
@@ -112,6 +113,10 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
               distributedMap += (key -> value)
               user ! insertConfirmed(key, value)
               context.log.info(s"($key , $value) WITH LOCATION $location STORED IN ZONE: ${zone.formatZone} ")
+              /*if (distributedMap.size > 25) {
+                context.self ! findZone(Procedure[Node.Command]().withReference(context.spawn(Node(), s"node-${context.self.path}-$nodeSpawns")).withLocation(zone.get_XRange._1,zone.get_YRange._1))
+                nodeSpawns += 1
+              }*/
 
             case NEW_NODE =>
               context.log.info(s"NODE:ZONE:: ${zone.formatZone} SPLIT PROCEDURE")
@@ -149,9 +154,8 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
           // Closest neighbors to P (that has not been visited)
           val closetNeighborsToLocation = zone.closestPointToP(p)
           if (closetNeighborsToLocation.nonEmpty) {
-            context.log.info(s"NODE::ZONE: ANYTHING")
             closetNeighborsToLocation.head ! findZone(p.withVisited(context.self))
-            context.log.info(s"NODE::ZONE: ${zone.formatZone} DOES NOT CONTAIN LOCATION: $location. FORWARDING PROCEDURE")
+            context.log.info(s"NODE::ZONE: ${zone.formatZone} DOES NOT CONTAIN LOCATION: $location. FORWARDING PROCEDURE TO OPTIMAL NEIGHBOR")
           }
           else
             context.log.warn(s"ROUTING TO P:$location FAIL. NO OPTIMAL PROCEDURE FORWARDING")
