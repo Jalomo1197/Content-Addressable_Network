@@ -35,5 +35,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
   "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
-  "com.iheart" %% "ficus" % "1.5.0"
+  "com.iheart" %% "ficus" % "1.5.0",
+  "com.typesafe.akka" %% "akka-cluster-sharding" % "2.5.32"
+
 )
