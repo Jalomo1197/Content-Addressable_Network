@@ -47,11 +47,11 @@ class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Comma
       // DNS to Boot to Zone,
       // for item in config file, we receive the (key,value) and send to bootstrap here.
       case insert(procedure) =>
-        context.log.info(this.getClass + s" : inserting(${procedure.getDHTpair.get}) => Bootstrap ")
+        context.log.info(this.getClass + s" : inserting(${procedure.getDataToStore.get}) => Bootstrap ")
         bootstraps.head ! insert(procedure)
 
       case keyLookup(procedure) =>
-        context.log.info(this.getClass + s" : Key Lookup(${procedure.getDHTpair.get}) => Bootstrap ")
+        context.log.info(this.getClass + s" : Key Lookup(${procedure.getDataToStore.get}) => Bootstrap ")
         bootstraps.head ! keyLookup(procedure)
 
     }

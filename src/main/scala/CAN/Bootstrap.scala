@@ -9,21 +9,21 @@ object Bootstrap{
   def apply():  Behavior[Command] = Behaviors.setup(context => new Bootstrap(context))
 
   trait Command
-  /* For setting up initial nodes when DNS is created */
+  /** For setting up initial nodes when DNS is created */
   case class initializeZones() extends Command
-  /* For new nodes that want access to an existing node in CAN */
+  /** For new nodes that want access to an existing node in CAN */
   case class getNodeInNetwork(p: Procedure[Node.Command]) extends Command
 }
-// TODO: line 40 case insert(kv)
+
+/** Maintains a list of active nodes in the content-addressable network */
 class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavior[Bootstrap.Command](context){
   // Importing relevant commands
   import Node.{acquiredNodeInNetwork,findZone,setZone,initializeNeighbors}
   import Bootstrap._
   import DNS.{insert, keyLookup}
-  // List of up and running nodes in network
+  /** List of up and running nodes in network */
   var active_nodes: List[ActorRef[Node.Command]] = List.empty[ActorRef[Node.Command]]
 
-  /**********************      COMMAND PROCESSING       **********************/
   override def onMessage(msg: Bootstrap.Command): Behavior[Bootstrap.Command] = {
     msg match {
       /* For setting up initial nodes when DNS is created */
@@ -41,20 +41,17 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
         TODO: change to one random node only, AFTER routing (Zone.closetToP) is completed */
       case insert(p) =>
         active_nodes.head !  findZone(p)
-        //active_nodes.foreach(a => a ! findZone (p))
-        context.log.info(s"$thisPath: Insert ${p.getDHTpair.get} Procedure :: findZone(kv) => Node In Network")
+        context.log.info(s"$thisPath: Insert ${p.getDataToStore.get} Procedure :: findZone(kv) => Node In Network")
 
       case keyLookup(p) =>
         active_nodes.head !  findZone(p)
-        //active_nodes.foreach(a => a ! findZone (p))
         context.log.info("$thisPath: Key Lookup DONE")
     }
     this
   }
-  /**********************     END OF COMMAND PROCESSING       **********************/
 
 
-  /*  init 16x16 conceptual grid into 4 coordinate planes ( + ) where center of + is ( x = 7, y = 7 )
+  /**  init 16x16 conceptual grid into 4 coordinate planes ( + ) where center of + is ( x = 7, y = 7 )
       Self defined circular coordinate plane ( + ) meaning List (1) would be top left,
       then (2) right, then (3) below 1 and 4 below 2
       1 = (0,7),(0,7)  -> (x,y) = (0,0),(7,7)
@@ -79,10 +76,10 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
     })
   }
 
-  // To obtain arbitrary C.A.N. node within active_nodes
+  /** To obtain an arbitrary active content-addressable network node */
   def getRandomNode: ActorRef[Node.Command] = active_nodes(new Random().nextInt(active_nodes.length))
 
-  // Alias for context.self.path
+  /** Alias for context.self.path */
   def thisPath: ActorPath = context.self.path
 }
 

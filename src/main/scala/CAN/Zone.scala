@@ -109,80 +109,50 @@ object Zone extends Enumeration {
     def optimal_XDirection(P: (Double, Double)): Zone.direction = if (P._1 > get_XRange._2) Right else Left
 
 
-    /* Theses functions return Booleans. To determine optimal paths for forwarding Procedure */
-    def P_towardsTopLeft(P: (Double, Double)): Boolean = {
-      //println(s"[Debug] ${P} ${(get_XRange._1, get_YRange._2)}")
-      //println(s"[Debug] ${P._1.getClass} ${(get_XRange._1, get_YRange._2)}  ${get_XRange._1.getClass} ")
-      //println(s"[DEBUG]: ${P} ${formatZone} towardsTopLeft = ${P._1 < get_XRange._1 && P._2 > get_YRange._2}")
-      (P._1 < get_XRange._1) && (P._2 > get_YRange._2)
-    }
+    /** Returns: Boolean. True if closest corner in zone to point P is the top-left corner. Otherwise, False.*/
+    def P_towardsTopLeft(P: (Double, Double)): Boolean = (P._1 < get_XRange._1) && (P._2 > get_YRange._2)
+    /** Returns: Boolean. True if closest corner in zone to point P is the top-right corner. Otherwise, False.*/
+    def P_towardsTopRight(P: (Double, Double)): Boolean = (get_XRange._2 < P._1) && (get_YRange._2 < P._2)
+    /** Returns: Boolean. True if closest corner in zone to point P is the bottom-left corner. Otherwise, False.*/
+    def P_towardsBottomLeft(P: (Double, Double)): Boolean = (P._1 < get_XRange._1) && (P._2 < get_YRange._1)
+    /** Returns: Boolean. True if closest corner in zone to point P is the bottom-right corner. Otherwise, False.*/
+    def P_towardsBottomRight(P: (Double, Double)): Boolean = (get_XRange._2 < P._1) && (P._2 < get_YRange._1)
 
-    def P_towardsTopRight(P: (Double, Double)): Boolean = {
-      //println(s"[DEBUG]: ${P}  ${formatZone} towardsTopRight = ${get_XRange._2 < P._1 && get_YRange._2 < P._2}")
-      (get_XRange._2 < P._1) && (get_YRange._2 < P._2)
-    }
-
-    def P_towardsBottomLeft(P: (Double, Double)): Boolean = {
-      //println(s"[DEBUG]: ${P} ${formatZone} towardsBottomLeft = ${P._1 < get_XRange._1 && P._2 < get_YRange._1}")
-      //println(s"DOUBLE COMPARING X: ${P._1} < ${get_XRange._1} : ${P._1 < get_XRange._1}")
-      //println(s"DOUBLE COMPARING Y: ${P._2} < ${get_YRange._1} : ${P._2 < get_YRange._1}")
-      (P._1 < get_XRange._1) && (P._2 < get_YRange._1)
-    }
-
-    def P_towardsBottomRight(P: (Double, Double)): Boolean = {
-      //println(s"[DEBUG]: ${P} ${formatZone} towardsBottomRight = ${get_XRange._2 < P._1 && P._2 < get_YRange._1}")
-      (get_XRange._2 < P._1) && (P._2 < get_YRange._1)
-    }
-    /** Returns a list of optimal neighbors to forward procedure */
+    /** Returns a list of optimal neighbors to forward procedure associated with the find zone command */
     def closestPointToP(procedure: Procedure[Node.Command]): List[ActorRef[Node.Command]] = {
       // If this function is executed, P was not in this node's zone
       val P: (Double, Double) = procedure.getLocation.get
       // If in one of this nodes ranges, optimal forward is only one node
-
       if(P_In_XRange(P)) {
-
         val dir = optimal_YDirection(P)
         val neighbor = neighborTable.neighbors(dir.id).getNode
-        if (neighbor != null && !procedure.wasVisited(neighbor)) {
-          //println(s"[DEBUG] In P_In_XRange Branch. ${List(neighbor)}")
+        if (neighbor != null && !procedure.wasVisited(neighbor))
           return List(neighbor)
-        }
       }
       if(P_In_YRange(P)) {
         val dir = optimal_XDirection(P)
         val neighbor = neighborTable.neighbors(dir.id).getNode
-        if (neighbor != null && !procedure.wasVisited(neighbor)) {
-          //println(s"[DEBUG] In P_In_YRange Branch. ${List(neighbor)}")
+        if (neighbor != null && !procedure.wasVisited(neighbor))
           return List(neighbor)
-        }
       }
       // We are finding optimal neighbors to forward the procedure (Min: 1, Max: 0)
       var validNeighborsToForward: List[ActorRef[Node.Command]] = List()
-      //println("[DEBUG] here 1")
       if (P_towardsTopRight(P)){
         validNeighborsToForward +:= neighborTable.neighbors(Up.id).getNode
         validNeighborsToForward +:= neighborTable.neighbors(Right.id).getNode
-        //println(s"[DEBUG] towardsTopRight: $validNeighborsToForward")
       }
       else if (P_towardsBottomRight(P)){
         validNeighborsToForward +:= neighborTable.neighbors(Down.id).getNode
         validNeighborsToForward +:= neighborTable.neighbors(Right.id).getNode
-        //println(s"[DEBUG] towardsBottomRight: $validNeighborsToForward")
       }
       else if (P_towardsBottomLeft(P)){
         validNeighborsToForward +:= neighborTable.neighbors(Left.id).getNode
         validNeighborsToForward +:= neighborTable.neighbors(Down.id).getNode
-        //println(s"[DEBUG] towardsBottomLeft: $validNeighborsToForward")
       }
       else if (P_towardsTopLeft(P)){
         validNeighborsToForward +:= neighborTable.neighbors(Up.id).getNode
         validNeighborsToForward +:= neighborTable.neighbors(Left.id).getNode
-        //println(s"[DEBUG] towardsTopLeft: $validNeighborsToForward")
       }
-      // Filtering none existing neighbors (Because we might be at the edge of the space defined)
-      // & Filtering already visited neighbors
-      //println(s"[DEBUG] End Of Function. No filter $validNeighborsToForward")
-      //println(s"[DEBUG] End Of Function. With filter ${validNeighborsToForward.filter( n => n != null && !procedure.wasVisited(n))}")
       validNeighborsToForward.filter( n => n != null && !procedure.wasVisited(n))
     }
 
@@ -197,6 +167,7 @@ object Zone extends Enumeration {
         splitX(halfPoint)
         // New node gets right half
         newZone = Zone((halfPoint, x2), get_YRange)
+        split = 'y'
       }
       else if(split == 'y'){
         // New Y Border
@@ -205,6 +176,7 @@ object Zone extends Enumeration {
         splitY(halfPoint)
         // New node gets top half
         newZone = Zone(get_YRange, (halfPoint, y2))
+        split = 'x'
       }
       newZone.copyNeighborTable(neighborTable)
     }
@@ -220,6 +192,7 @@ object Zone extends Enumeration {
       this
     }
 
+    /** Returns a direction. Used in set_neighbor function */
     def findDirection(zone: Zone): Zone.direction = {
       val X_axis = zone.get_XRange
       val Y_axis = zone.get_YRange
@@ -228,10 +201,10 @@ object Zone extends Enumeration {
       else if(X_axis == get_XRange && Y_axis._1 == get_YRange._2 && Y_axis._2 > get_YRange._2) Up
       else Down
     }
+    /** Returns: Boolean. True if zones are identical. Otherwise, False. */
+    def identicalZone(zone: Zone): Boolean = get_XRange == zone.get_XRange && get_YRange == zone.get_YRange
 
-    def identicalZone(zone: Zone): Boolean =
-      get_XRange == zone.get_XRange && get_YRange == zone.get_YRange
-
+    /** Updates neighbor table, only if passed in zone is a valid neighbor */
     def set_neighbor(node: ActorRef[Node.Command], zone: Zone): Unit = {
       val X_axis = zone.get_XRange
       val Y_axis = zone.get_YRange
