@@ -104,15 +104,72 @@ We use typed Akka model system to interact and simulate Content Addressable Netw
 Our (CAN) is a robust, scalable, distributed systems designed for efficient search of data
 stored in a DHT. 
 
-IDEA : Sending immutable messages between typed actor models to construct and manipulate Nodes within CAN
+#### Implementations
+ 
+To send immutable messages between typed actor models to construct and manipulate Nodes within CAN
+Each can stores a chunk- called a zone of entire hash table containing multiple key value pairs
+Each node holds information about a small number of adjacent zones in the table (neighbor table)
+Can space is divided amongst nodes, it can grow incrementally by allocating its own portion of coordinate space to another node by splitting half of its allocated zone in half retaining half and giving other part to new node
 
- 1. Akka/HTTP abstraction created through DNS. 
- 2. User simulates Insertions and Queries of data to DNS by requesting actions
- 3. FILL IN REST
- 4.
- 5.
- 6.
-  
+[ 1 ] -> [ 1|2 ]  (Same Area)
+1)	New node finds a node in CAN
+2)	Find a node whose zone will be split
+3)	Update neighbors on split so routing can include new node
+
+Bootstrap – New CAN node can discover IP address of any node currently in system -> Use some bootstrap mechanism
+
+Assume can has associated DNS and this resolves IP address of one or more CAN bootstrap nodes.
+
+Bootstrap nodes maintain partial list of CAN nodes in the system
+
+New node -> Looks up CAN domain name in DNS to retrieve boostrap IP address.
+
+Bootsrap then supplies IP address of several random chosen nodes in system
+
+Finding a zone – New node randomly chooses point P in space and sends a join request for destination P
+
+Then node splits its zone in half and assigns one half to new node.
+
+For 2-d space, zone is split in X then Y dimension. 
+
+Then (key,value) pairs from the half zone are handed over to new node
+
+Joining the routing (update) update neighbors to eliminate and update old / new neighbors
+
+Node Leave - If no neighbors. It becomes empty space, otherwise if has 2 people in one node, its given to neighbor whose zone is smallest
+
+When node fails/leaves/dies it initiates takeover mechanism and starts a takeover 
+When timer expires a node sends TAKEOVER message conveying its own zone volume to all of failed node’s neighbors
+
+On receipt of TAKEOVER msg, a node cancels its own timer if the zone volume in the message is smaller that its zone value or replies with its own takeover msg.
+
+This just ensures neighbors are updates and neighboring node is chosen while still active/alive
+
+Zone overloading - (repeated (key,value) pairs that are frequently accessed)
+
+Advantages : reduced path length, number of hops, which is less latency, 
+Improved fault tolerance because a zone is vacant only when all the nodes in a zone crash at same time
+Negatives: overloading adds complexity because nodes must track set of peers
+
+On join – send message to random point on space, the existing node in space knows its zone coordinates and those of its neighbors, and  instead of directly splitting zone, the first node compares the volume of its zone to its neighbors in the coordinate space to accommodate the split.
+
+Total volume = V(t) and n is total number on nodes which will be assigned to a zone of voume V(t/n) to each node
+
+Caching and replication techniques
+
+Replication: A overloaded(work) node can replicate the key and data at each of neighboring nodes for load balancing
+
+#### EVALUATION SYSTEMS
+    *    Entry | Direction
+    1.     0   | Left
+    2.     1   | Up
+    3.     2   | Right
+    4.     3   | Down
+    5.     4   | default (self)
+
+#### RunTime 
+
+For a d dimensional space partitioned into n equal zones, the average routing path length is (d/4)(^1/d) and individual nodes maintain 2d neighbors. And path length grows at O(n^1/d)
 
 ### Chord
 
