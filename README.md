@@ -126,22 +126,19 @@ Our architecture and construction of a CAN overlay consists of three steps:
    • A bootstrap node reboots failed CAN nodes for which it is responsible for.
 
 ###### CAN Node Actor 
-• Determines optimal next neighbor to forward procedure if its zone does not contain the desired destination.
+   • Determines optimal next neighbor to forward procedure if its zone does not contain the desired destination.
 
-• Updates/Initializes its neighbors_table appropriately on command.
-2. Finding a zone.
-    1. Determines routing closest point to P
-    2. Validates ranges
-    3. Assigns neighbors to node
-    4. Completes splits if network is congested
+   • Updates/Initializes its neighbors_table appropriately on command.
+
+   • Send a split procedure to itself when congested, meaning the node is responsible for to much data.
+
     
-3. Joining the overlay routing.
-    1. The nodes are able to route messages in the CAN overlay utilizing only information about neighbouring nodes
+##### Overlay routing.
+   • The nodes are able to route messages in the CAN overlay utilizing only information about neighbouring nodes
 and their zones. 
-    2. Since the CAN space is a 2-dimensional coordinate grid, this becomes a matter of routing along a straight
+   
+   • Since the CAN space is a 2-dimensional coordinate grid, this becomes a matter of routing along a straight
 line. (Vector (x,x),(y,y) to P)
-
-#### Sharing Responsibilities When Congested
 
 
 ### Further Overview CAN Driver
