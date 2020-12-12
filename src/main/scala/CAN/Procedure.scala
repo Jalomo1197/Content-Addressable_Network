@@ -30,7 +30,8 @@ case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
                         reference: Option[ActorRef[T]] = None,
                         zone: Option[Zone] = None,
                         user: Option[ActorRef[User.Command]] = None,
-                        split: Option[(ActorRef[Node.Command], ActorRef[Node.Command])] = None
+                        split: Option[(ActorRef[Node.Command], ActorRef[Node.Command])] = None,
+                        KV_transfers: Option[Map[String, String]] = None
                        ) {
   import Procedure.routing_type
 
@@ -40,10 +41,11 @@ case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
   def getDHTpair: Option[(String, String)] = key_value
   def getKeyLookup: Option[String] = key_lookup
   def getLocation: Option[(Double, Double)] = location
-  def getReplyTo: Option[ActorRef[T]] = reference
+  def getReference: Option[ActorRef[T]] = reference
   def getUser: Option[ActorRef[User.Command]] = user
   def getZone : Option[Zone] = zone
   def getSplit : Option[(ActorRef[Node.Command], ActorRef[Node.Command])] = split
+  def getKeyValueTransfers: Option[Map[String, String]] = KV_transfers
 
   def withUser(u: ActorRef[User.Command]): Procedure[T] =
     this.copy(user = Some(u))
@@ -81,6 +83,14 @@ case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
       case None =>        this.copy( visited = Some(List(v)) )
     }
   }
+
+  def withKeyValueTransfer(key: String, value: String): Procedure[T] = {
+    KV_transfers match{
+      case None => this.copy(KV_transfers = Some(Map(key -> value)))
+      case Some(map) => this.copy(KV_transfers = Some(map + (key -> value)))
+    }
+  }
+
 
   /*  To check if a neighbor was visited to then forward
       or NOT forward depending on return value            */
