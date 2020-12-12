@@ -8,24 +8,25 @@ object Node{
   def apply():  Behavior[Command] = Behaviors.setup(new Node(_))
 
   trait Command
-  // Reply from DNS, providing a bootstrap node
+  /** Reply from DNS, providing a bootstrap node */
   case class acquiredBootstrap(p: Procedure[Bootstrap.Command]) extends Command
-  // Reply from a bootstrap node, providing an exist CAN node
+  /** Reply from a bootstrap node, providing an exist CAN node */
   case class acquiredNodeInNetwork(p: Procedure[Node.Command]) extends Command
-  // Query for this node's zone, must reply
+  /** Query for this node's zone, must reply */
   case class getZone(p: Procedure[Node.Command]) extends Command
-  // Command to set node's zone
+  /** Command to set node's zone */
   case class setZone(p: Procedure[Node.Command]) extends Command
-  // Command to set a neighbor if valid zone
+  /** Command to set a neighbor if valid zone */
   case class setNeighbor(p: Procedure[Node.Command]) extends Command
-  // For setup of the initial 4 nodes
+  /** For setup of the initial 4 nodes */
   case class initializeNeighbors(n: List[ActorRef[Node.Command]]) extends Command
-  // Beginning of routing to find zone
+  /** Beginning of routing to find zone. Required a routing purpose */
   case class findZone(p: Procedure[Node.Command]) extends Command
   /** Command to join the new node to network. New node only has to shoot updates to its neighbors */
   case class joinNetwork(p: Procedure[Node.Command]) extends Command
 }
 
+/** Represents a Content-Addressable Network node */
 class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Command](context){
   import Node._
   import Bootstrap.getNodeInNetwork
@@ -72,39 +73,39 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
         context.log.info(s"NODE::ZONE: ${zone.formatZone} SETTING NEIGHBOR::ZONE: ${neighborZone.formatZone}")
 
       case joinNetwork(p) =>
-        // Obtain data pertaining to this zone
-        distributedMap = p.getKeyValueTransfers.get
-        // Update zone with new assigned zone
-        zone = p.getZone.get
-        // Send updates to neighbors
-        sendUpdatesToNeighbors()
+        distributedMap = p.getKeyValueTransfers.get          // Obtain data pertaining to this zone
+        zone = p.getZone.get                                 // Update zone with new assigned zone
+        sendUpdatesToNeighbors()                             // Send updates to neighbors
         context.log.info("NEW NODE SENT UPDATE TO NEIGHBORS")
 
 
       // Procedure to utilize routing algorithm, to find point P(x,y) in space
       case findZone(p) =>
-        // Extracting info for cases KEY_LOOKUP and KEY_STORE
-        val location = p.getLocation.get
-        val user = p.getUser.get
-        // If point P is in this nodes zone
-        if (zone.containsP(location)) {
-          p.getRoutingPurpose.get match {  // identify purpose
-            case KEY_LOOKUP =>
-              // return key_value pair to user
-              val key = p.getKeyLookup.get
-              val value = distributedMap.get(key)
-              user ! queryResponse(key, distributedMap.get(key))
-              context.log.info(s"FOUND KEY: $key LOCATION: $location ZONE: ${zone.formatZone} RETURNING: ${(key, value)}")
+        val location = p.getLocation.get                    // Extracting info for cases KEY_LOOKUP and KEY_STORE
+        if (zone.containsP(location)) {                     // If point P is in this nodes zone
+          p.getRoutingPurpose.get match {                   // Identify purpose
 
-            case KEY_STORE =>
-              val (key, value) = p.getDHTpair.get
+            case KEY_LOOKUP =>                              // Return key_value pair to user
+              val key = p.getKeyQuery.get
+              val value = distributedMap.get(key)
+              val user = p.getUser.get
+              user ! queryResponse(key, distributedMap.get(key))
+              context.log.info(s"FOUND KEY: $key WITH LOCATION: $location " +
+                                s"IN ZONE: ${zone.formatZone} RETURNING: ${(key, value)}")
+
+            case KEY_STORE =>                               // Return confirmation to user
+              val (key, value) = p.getDataToStore.get
               distributedMap += (key -> value)
+              val user = p.getUser.get
               user ! insertConfirmed(key, value)
               context.log.info(s"($key , $value) WITH LOCATION $location STORED IN ZONE: ${zone.formatZone} ")
-              /*if (distributedMap.size > 25) {
-                context.self ! findZone(Procedure[Node.Command]().withReference(context.spawn(Node(), s"node-${context.self.path}-$nodeSpawns")).withLocation(zone.get_XRange._1,zone.get_YRange._1))
+              if (distributedMap.size > 10) {
+                context.self !  findZone(Procedure[Node.Command]()
+                                .withReference(context.spawn(Node(), s"node-${context.self.path.toString.replace('/', '-')}-$nodeSpawns"))
+                                .withLocation(zone.get_XRange._1,zone.get_YRange._1)
+                                .withRoutingPurpose(NEW_NODE))
                 nodeSpawns += 1
-              }*/
+              }
 
             case NEW_NODE =>
               context.log.info(s"NODE:ZONE:: ${zone.formatZone} SPLIT PROCEDURE")
@@ -158,7 +159,7 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
         case null =>
         case ref =>
           ref ! setNeighbor(Procedure[Node.Command]()
-            .withReference(context.self)
+            .withNeighbor(context.self)
             .withZone(zone))
       }
     })
