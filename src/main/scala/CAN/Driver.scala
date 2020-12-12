@@ -13,8 +13,8 @@ object Simulation {
   def main(args: Array[String]): Unit = {
     // Initialize zones and baby config file inserted into CAN
     val system: ActorSystem[Driver.lookup] = ActorSystem(Driver(), "driver")
-    //system ! Driver.lookup("Jumanji")
-    //system ! Driver.lookup("Heat")
+    system ! Driver.lookup("Jumanji")
+    system ! Driver.lookup("Heat")
   }
 }
 
