@@ -33,7 +33,7 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
       /* For new nodes that want access to an existing node in CAN (Randomly chosen) */
       case getNodeInNetwork(p) =>
         val nodeInNetwork = getRandomNode
-        val new_node = p.getReplyTo.get
+        val new_node = p.getReference.get
         new_node ! acquiredNodeInNetwork(Procedure[Node.Command]().withReference(nodeInNetwork))
         context.log.info(s"$thisPath: New Node Procedure :: acquiredNodeInNetwork(Procedure) => New Node")
 

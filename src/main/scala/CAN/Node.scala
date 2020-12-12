@@ -1,7 +1,6 @@
 package CAN
 
 import CAN.Procedure.{KEY_LOOKUP, KEY_STORE, NEW_NODE}
-import CAN.Zone.default
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 
@@ -23,8 +22,8 @@ object Node{
   case class initializeNeighbors(n: List[ActorRef[Node.Command]]) extends Command
   // Beginning of routing to find zone
   case class findZone(p: Procedure[Node.Command]) extends Command
-  // Command to set a neighbor if valid zone
-  case class split(p: Procedure[Node.Command]) extends Command
+  /** Command to join the new node to network. New node only has to shoot updates to its neighbors */
+  case class joinNetwork(p: Procedure[Node.Command]) extends Command
 }
 
 class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Command](context){
@@ -45,17 +44,17 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
 
       // Response from DNS, procedure contains a bootstrap node
       case acquiredBootstrap(p) =>
-        p.getReplyTo.get ! getNodeInNetwork(Procedure[Node.Command]().withReference(context.self))
+        p.getReference.get ! getNodeInNetwork(Procedure[Node.Command]().withReference(context.self))
         context.log.info(s"NODE NODE REQUESTED A NODE IN CAN FROM BOOTSTRAP")
 
       // Response from a bootstrap node, procedure contains a active C.A.N. node
       case acquiredNodeInNetwork(p) =>
-        p.getReplyTo.get ! findZone(Procedure[Node.Command]().withReference(context.self).withZone(zone))
+        p.getReference.get ! findZone(Procedure[Node.Command]().withReference(context.self).withZone(zone))
         context.log.info(s"NODE NODE FIND_ZONE PROCEDURE SENT TO NODE IN CAN")
 
       // Query for this node's zone
       case getZone(p) =>
-        p.getReplyTo.get ! setNeighbor(Procedure[Node.Command]().withNeighbor(context.self).withZone(zone))
+        p.getReference.get ! setNeighbor(Procedure[Node.Command]().withNeighbor(context.self).withZone(zone))
         context.log.info(s"NODE::ZONE: ${zone.formatZone} SENT ZONE INFO")
 
       // Command to set this node's zone
@@ -83,10 +82,15 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
         zone.set_neighbor(neighborReference, neighborZone)
         context.log.info(s"NODE::ZONE: ${zone.formatZone} SETTING NEIGHBOR::ZONE: ${neighborZone.formatZone}")
 
-      // New Node inserted during congestion
-      case split(p) =>
-        zone.splitZone(context.self)
-        context.log.info("Split completed!\nNode : " + context.self.path.name + " inserted")
+      case joinNetwork(p) =>
+        // Obtain data pertaining to this zone
+        distributedMap = p.getKeyValueTransfers.get
+        // Update zone with new assigned zone
+        zone = p.getZone.get
+        // Send updates to neighbors
+        sendUpdatesToNeighbors()
+        context.log.info("NEW NODE SENT UPDATE TO NEIGHBORS")
+
 
       // Procedure to utilize routing algorithm, to find point P(x,y) in space
       case findZone(p) =>
@@ -110,20 +114,39 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
               context.log.info(s"($key , $value) WITH LOCATION $location STORED IN ZONE: ${zone.formatZone} ")
 
             case NEW_NODE =>
-              p.getReplyTo.get ! split(Procedure[Node.Command]().withReference(context.self))
-              context.log.info("Splitting Zone with Node: " + context.self.path.name)
-              // split(procedure) [newNode, Location] :
-              //    newNode <- NewZONE , ThisZoneMOD, ThisRef, Neighbors, KEY_VALUE that are not mine (hash keys and extract)
-              //
-              // BOTH newNode & this node:
-              //    every_neighbor <- setNeighbor(myRef, myZone)
-              // this node
-              context.log.warn("SPLIT NOT IMPLEMENTED")
+              context.log.info(s"NODE:ZONE:: ${zone.formatZone} SPLIT PROCEDURE")
+              val newNodeRef = p.getReference.get
+              // New Zone for node node. Which contains the same neighbors as this zone
+              val newZone = zone._splitZone
+              // This node's zone updating its neighborTable to include the new node
+              zone.set_neighbor(newNodeRef, newZone)
+              // New node's zone updating its neighborTable to include this node
+              newZone.set_neighbor(context.self, zone)
+              // Now both zone have appropriate zones and neighborTables
+              // Next (Key, Value) transfers, modify Procedure
+              var joinProcedure = Procedure[Node.Command]().withZone(newZone)
+              var keysInNewZone: List[String] = List()
+              distributedMap.keys.foreach(key => {
+                val locationOfKey = Zone.findLocation(key)
+                if(!zone.containsP(locationOfKey))
+                  keysInNewZone +:= key
+              })
+              // Transferring (key, value) through Procedure and removing from this map
+              keysInNewZone.foreach( key => {
+                joinProcedure = joinProcedure.withKeyValueTransfer(key, distributedMap(key))
+                distributedMap = distributedMap - key
+              })
+              // Sending join C.A.N command to the newNode
+              newNodeRef ! joinNetwork(Procedure[Node.Command]().withZone(newZone))
+              sendUpdatesToNeighbors()
+              context.log.info("MODIFIED NODE SENT UPDATE TO NEIGHBORS")
+              //newNodeRef ! split(Procedure[Node.Command]().withReference(context.self))
+              context.log.info(s"MODIFIED:NODE::ZONE: ${zone.formatZone} NEW:NODE::ZONE: ${newZone.formatZone} SPLIT ACCOMPLISHED")
+              context.log.info(s"KEYS TRANSFERRED: $keysInNewZone FROM ZONE: ${zone.formatZone} -> TO ZONE: ${newZone.formatZone}")
           }
         }
         else{
           // Closest neighbors to P (that has not been visited)
-
           val closetNeighborsToLocation = zone.closestPointToP(p)
           if (closetNeighborsToLocation.nonEmpty) {
             context.log.info(s"NODE::ZONE: ANYTHING")
@@ -135,5 +158,17 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
         }
     }
     this
+  }
+
+  def sendUpdatesToNeighbors(): Unit ={
+    zone.neighborTable.neighbors.foreach(neighbor => {
+      neighbor.getNode match {
+        case null =>
+        case ref =>
+          ref ! setNeighbor(Procedure[Node.Command]()
+            .withReference(context.self)
+            .withZone(zone))
+      }
+    })
   }
 }

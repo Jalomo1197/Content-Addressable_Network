@@ -50,7 +50,7 @@ object Zone extends Enumeration {
     (x,y)
   }
 }
-  class Zone(X_range: (Double, Double), Y_range: (Double, Double)) {
+  class Zone(var X_range: (Double, Double),var Y_range: (Double, Double)) {
     // Ordering: Split -> x then y
     var split = 'x'
     var neighborTable: Neighbors = Neighbors()
@@ -88,7 +88,10 @@ object Zone extends Enumeration {
     def formatZone: String = s"X Range: $X_range Y Range: $Y_range"
     /** Returns: Boolean signifying if P is in the defined zone */
     def containsP(P: (Double, Double)): Boolean = P._1 >= get_XRange._1 && P._1 <= get_XRange._2 && P._2 >= get_YRange._1 && P._2 <= get_YRange._2
-
+    /** In place split of X range. New node always gets right side. */
+    def splitX(newX2: Double): Unit = X_range = (get_XRange._1, newX2)
+    /** In place split of Y range. New node always gets top side. */
+    def splitY(newY2: Double): Unit = Y_range = (get_YRange._1, newY2)
 
     /** Returns Boolean
      * Check if P's Y value is in this nodes YRange */
@@ -184,6 +187,40 @@ object Zone extends Enumeration {
     }
 
 
+    def _splitZone: Zone = {
+      val ((x1,x2),(y1,y2)) = (get_XRange, get_YRange)
+      var halfPoint = 0.0
+      var newZone: Zone = null
+      if (split == 'x'){
+        // New X Border
+        halfPoint = (x1 + x2)/2
+        // Reassignment of this zone
+        splitX(halfPoint)
+        // New node gets right half
+        newZone = Zone((halfPoint, x2), get_YRange)
+      }
+      else if(split == 'y'){
+        // New Y Border
+        halfPoint = (y1 + y2)/2
+        // Reassignment of this zone
+        splitY(halfPoint)
+        // New node gets top half
+        newZone = Zone(get_YRange, (halfPoint, y2))
+      }
+      newZone.copyNeighborTable(neighborTable)
+    }
+
+    /** Returns: Zone. This zone belongs to the new node.
+     * Ensures old zones neighbor table is NOT overwritten */
+    def copyNeighborTable(fromSplitNeighborTable: Neighbors): Zone = {
+      // Copying neighbor table FROM node giving half its zone TO new node
+      val directions = List(Up, Down, Left, Right)
+      for (d <- directions){
+        this.neighborTable.neighbors(d.id) = fromSplitNeighborTable.neighbors(d.id)
+      }
+      this
+    }
+
     def splitZone(new_node: ActorRef[Node.Command]): Unit = {
       // Add zone to Procedure
       //val zone: Unit = new_node ! Procedure[Node.Command]().getZone.get
@@ -239,6 +276,8 @@ object Zone extends Enumeration {
       // Update (Left neighbor) of original occupant to new node
       // How do I get occupant ActorRef?
     }
+
+
     def updateNeighbors(): Unit = {
 
     }
