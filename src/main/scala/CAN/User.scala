@@ -10,6 +10,8 @@ object User{
     Behaviors.setup(new User(_))
 
   trait Command
+
+ //final case class insert(key: String, value: Option[String]) extends Command
   final case class queryResponse(key: String, value: Option[String]) extends Command
   // Insert (K, V) pairs from config
   final case class insertConfig(config: Config) extends Command
@@ -40,14 +42,14 @@ class User(context: ActorContext[User.Command]) extends AbstractBehavior[User.Co
         })
 
       case insertConfirmed(key: String, value: String) =>
-        context.log.info("KEY: " + key + " , VALUE: " + value + "inserted!")
+        context.log.info("KEY: " + key + " , VALUE: " + value + " INSERTED IN DISTRIBUTED HASH MAP")
 
       case queryResponse(key, value) =>
         value match {
           case None =>
-            context.log.info("KEY: " + key + " is NOT in distributed map")
+            context.log.info("KEY: " + key + " IS NOT IN DISTRIBUTED HASH MAP")
           case Some(v) =>
-            context.log.info("KEY: " + key + " found, VALUE: " + v)
+            context.log.info("KEY: " + key + " FOUND. VALUE: " + v)
         }
     }
     this

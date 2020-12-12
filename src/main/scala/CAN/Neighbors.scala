@@ -16,11 +16,7 @@ class Neighbors {
   */
   var neighbors: Array[Neighbor] = newNeighborTable()
 
-  def newNeighborTable(): Array[Neighbor] = {
-    val neighborTable: Array[Neighbor] = new Array[Neighbor](4)
-    for (k <- 0 until 4)
-      neighborTable(k) = new Neighbor(null, (0,0), default)
-    neighborTable
-  }
+  def newNeighborTable(): Array[Neighbor] =
+    Array.fill(4)(new Neighbor(null, (0,0), default))
 
 }

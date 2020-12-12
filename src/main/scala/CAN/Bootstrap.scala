@@ -33,18 +33,20 @@ class Bootstrap(context: ActorContext[Bootstrap.Command]) extends AbstractBehavi
       /* For new nodes that want access to an existing node in CAN (Randomly chosen) */
       case getNodeInNetwork(p) =>
         val nodeInNetwork = getRandomNode
-        val new_node = p.getReplyTo.get
+        val new_node = p.getReference.get
         new_node ! acquiredNodeInNetwork(Procedure[Node.Command]().withReference(nodeInNetwork))
         context.log.info(s"$thisPath: New Node Procedure :: acquiredNodeInNetwork(Procedure) => New Node")
 
       /* For insertion of new (key, Value) into distributed map
         TODO: change to one random node only, AFTER routing (Zone.closetToP) is completed */
       case insert(p) =>
-        active_nodes.foreach(a => a ! findZone (p))
+        active_nodes.head !  findZone(p)
+        //active_nodes.foreach(a => a ! findZone (p))
         context.log.info(s"$thisPath: Insert ${p.getDHTpair.get} Procedure :: findZone(kv) => Node In Network")
 
       case keyLookup(p) =>
-        active_nodes.foreach(a => a ! findZone (p))
+        active_nodes.head !  findZone(p)
+        //active_nodes.foreach(a => a ! findZone (p))
         context.log.info("$thisPath: Key Lookup DONE")
     }
     this

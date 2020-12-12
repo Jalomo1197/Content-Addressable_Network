@@ -41,7 +41,7 @@ class DNS(context: ActorContext[DNS.Command]) extends AbstractBehavior[DNS.Comma
   override def onMessage(msg: DNS.Command): Behavior[DNS.Command] = {
     msg match {
       case bootstrap(procedure) =>
-        procedure.getReplyTo.get ! acquiredBootstrap(Procedure[Bootstrap.Command]().withReference(bootstraps.head))
+        procedure.getReference.get ! acquiredBootstrap(Procedure[Bootstrap.Command]().withReference(bootstraps.head))
         context.log.info(s"$thisPath: acquiredBootstrap(procedure) => New Node")
 
       // DNS to Boot to Zone,
