@@ -153,65 +153,6 @@ object Zone extends Enumeration {
       validNeighborsToForward.filter( n => n != null && !procedure.wasVisited(n))
     }
 
-
-    def splitZone(new_node: ActorRef[Node.Command]): Unit = {
-      // Add zone to Procedure
-      //val zone: Unit = new_node ! Procedure[Node.Command]().getZone.get
-      var start = 0.0
-      var end = 0.0
-      var new_node_half = (0.0, 0.0)
-      var second_half = (0.0, 0.0)
-      var new_node_zone = Zone(new_node_half, second_half)
-      var current_node_zone = Zone(new_node_half, second_half)
-      // Split in x direction
-      if (split == 'x') {
-        start = get_XRange._1
-        end = get_XRange._2
-        //Divide Point P zone into two equal parts
-        new_node_half = (start, start + (end - start))
-        second_half = (start + (end - start), end)
-        // Set Zone for new Node (setZone)
-        new_node_zone = Zone(new_node_half, get_YRange)
-        current_node_zone = Zone(second_half, get_YRange)
-        // Assign neighbors of original occupant to new_node (Down, Left, Up)
-        //set_neighbor(new_node, )
-        // Update new_node Right neighbor (original occupant)
-        set_neighbor(new_node, current_node_zone)
-        // Update original occupant Left neighbor (new_node)
-        set_neighbor(getReference.get, new_node_zone)
-        // Split Ordering for next split
-        split = 'y'
-      }
-      // Split in y direction
-      else {
-        start = get_YRange._1
-        end = get_YRange._2
-        //Divide Point P zone into two equal parts
-        new_node_half = (start, start + (end - start))
-        second_half = (start + (end - start), end)
-        // Set Zone for new Node
-        new_node_zone = Zone(get_XRange, new_node_half)
-        current_node_zone = Zone(get_XRange, second_half)
-        // Update new_node Top neighbor (original occupant)
-        set_neighbor(new_node, current_node_zone)
-        // Update original occupant left neighbor (new_node)
-        set_neighbor(getReference.get, new_node_zone)
-        // Split Ordering for next split
-        split = 'x'
-      }
-      val t = neighborTable.neighbors(0)
-      // Update Neighbors for new node
-      new_node_zone.setNeighborTable(0, neighborTable.neighbors(0))
-      new_node_zone.setNeighborTable(1, neighborTable.neighbors(1))
-      // Joining Node (right neighbor) is current occupant
-      set_neighbor(new_node, current_node_zone)
-      new_node_zone.setNeighborTable(3, neighborTable.neighbors(3))
-      // Update (Left neighbor) of original occupant to new node
-      // How do I get occupant ActorRef?
-    }
-    def updateNeighbors(): Unit = {
-
-    }
     def findDirection(zone: Zone): Zone.direction = {
       val X_axis = zone.get_XRange
       val Y_axis = zone.get_YRange
