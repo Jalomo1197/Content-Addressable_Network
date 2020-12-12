@@ -62,18 +62,6 @@ class Node(context: ActorContext[Node.Command]) extends AbstractBehavior[Node.Co
       case setZone(p) =>
         zone = p.getZone.get
         zone.setReference(context.self)
-        /*
-        var i = 0
-        val occupant = zone.getReference.get
-        // Update node Neighbors
-        val new_node = p.getReplyTo.get
-        new_node ! setZone(p.withZone(zone.splitZone(context.self)).withOccupant((occupant, new_node)).split()
-        if(p.getRoutingPurpose.get == NEW_NODE){
-          zone.neighborTable.neighbors.withFilter(_ != Neighbor(null, (0,0), default)).foreach(n => {
-            setNeighbor(Procedure[Node.Command]().withNeighbor(n.getNode).withZone(zone))
-          })
-        }
-         */
         context.log.info(s"NODE::ZONE: ${zone.formatZone} ZONE SET")
 
       // Command to set this node's neighbor IF POSSIBLE ONLY
