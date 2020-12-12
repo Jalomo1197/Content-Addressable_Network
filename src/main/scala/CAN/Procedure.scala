@@ -87,8 +87,7 @@ case class Procedure[T](routingPurpose: Option[Procedure.routing_type] = None,
   def withKeyValueTransfer(key: String, value: String): Procedure[T] = {
     KV_transfers match{
       case None => this.copy(KV_transfers = Some(Map(key -> value)))
-      case Some(map) => map += key -> value
-                        this
+      case Some(map) => this.copy(KV_transfers = Some(map + (key -> value)))
     }
   }
 
