@@ -74,18 +74,61 @@ and was parsed with the parser.py script located under PythonParser that takes t
 
 Actors that simulate nodes in the simulated cloud have corresponding hash values are generated using unique names that will be assigned to these nodes and they will be inserted based on those hashes
 
-### CAN
+
+
+
+## Content-Addressable Network (CAN)
 
 Our implementation creates a 2-dimensional [0, 16.00]x[0, 16.00] coordinate space for the CAN. 
 The first node to join the CAN becomes the owner of the entire CAN space. For every new node that enters, if a zone is split, that node becomes the owner of that space.
-                                         
+                
+#### Abstractions: Procedures
+Our implementation includes via Akka Actor messages/commands to accomplish functionalities 
+such as:
+ 
+ • The insertion of movie data
+ 
+ • The retrieval of movie data
+ 
+ • The insertion of a new node into the CAN
+ 
+Such functionalities require much distinct and indistinct information. 
+The trivial way to ensure critical information is present, is to add numerous 
+parameters to distinct messages/commands. 
+In order to reduce commands having numerous parameters, 
+the case class Procedure[T] is introduced in our implementation. 
 
+A Procedure instance essentially encapsulates all required information for 
+a given procedures. A procedure can be the rout or actions taken to produce
+the mentioned functionalities. Information can be extracted form the Procedure 
+instances once the destination has been reached. The extraction of information 
+can be unsafe if the Procedure instance does not encapsulate required information.
+The future version of Procedure will try to enforce required data at compile time via
+Scala phantom types. CHORD in the future will be reimplemented to take advantage 
+of the generality and clearness that Procedure gives.                         
+
+#### Architecture And Construction Of A CAN
 Our architecture and construction of a CAN overlay consists of three steps:
-1. Bootstraping.
-    1. Bootstrap is responsible for the first initialization of zone
-    2. Getting or forwarding nodes insertions in network
-    3. Resolving or forwarding queries
-    
+##### Entities And Responsibilities:
+###### DNS Actor
+   • Singleton Actor that simulations the entry point for a given User Actor.
+   
+   • Communication point for user to insert and retrieve data.
+   
+   • DNS forward data insertion and data retrievals procedures to a bootstrap node.
+
+###### Bootstrap Actor
+   • First bootstrap node is responsible for the first four zones/nodes initializations.
+   
+   • A bootstrap node forwards data insertion and data retrievals procedures 
+    to an arbitrary active node in the network.
+   
+   • A bootstrap node reboots failed CAN nodes for which it is responsible for.
+
+###### CAN Node Actor 
+• Determines optimal next neighbor to forward procedure if its zone does not contain the desired destination.
+
+• Updates/Initializes its neighbors_table appropriately on command.
 2. Finding a zone.
     1. Determines routing closest point to P
     2. Validates ranges
@@ -97,6 +140,9 @@ Our architecture and construction of a CAN overlay consists of three steps:
 and their zones. 
     2. Since the CAN space is a 2-dimensional coordinate grid, this becomes a matter of routing along a straight
 line. (Vector (x,x),(y,y) to P)
+
+#### Sharing Responsibilities When Congested
+
 
 ### Further Overview CAN Driver
 
@@ -114,7 +160,7 @@ IDEA : Sending immutable messages between typed actor models to construct and ma
  6.
   
 
-### Chord
+## Chord
 
 Implementation details can be found in [previous project repository](https://bitbucket.org/jsanch75/group_13/src/master/).
 The focus of this README.md discussed the implementation and design of [CAN](https://people.eecs.berkeley.edu/~sylvia/papers/cans.pdf).
