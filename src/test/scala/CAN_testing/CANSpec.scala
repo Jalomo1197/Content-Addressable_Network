@@ -1,4 +1,4 @@
-package IoT_Temperture_testing
+package CAN_testing
 
 import java.lang.Thread.sleep
 import java.util.concurrent.TimeUnit

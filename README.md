@@ -1,30 +1,29 @@
-# CS441_Fall2020_Final_Project
-[Repository Link](https://bitbucket.org/jsanch75/group_13/src/master/)
+# Content-Addressable Network
+###### NOTE: still being developed
+## Team Members
 
-# Group Members
-Deividas Mickevicius : dmicke5
+| Github | Website|
+|------------- | -------------|
+|  [Alex Jalomo](https://github.com/Jalomo1197)            |  [jalomo1197.github.io](https://jalomo1197.github.io/Portfolio/)            |
+| [Deividas Mickevicius](https://github.com/davidmickev)            |  [davidmickev.github.io](https://davidmickev.github.io)            |
+|   [Jacob Sanchez](https://github.com/jsanchez78)            |  [jacobsanchez.dev](https://www.jacobsanchez.dev)            |
 
-Jacob Sanchez : jsanch75
 
-Alex Jalomo : ajalom2
-
-# Prerequisites
+## Prerequisites
 Installed [sbt-1.4.1](https://www.scala-sbt.org/download.html) 
 
-# Instructions
+## Instructions
 * Setup
-    * Download the project [source](https://bitbucket.org/jsanch75/group_13/src/master/) 
-    * or CL `git clone https://mttdavid@bitbucket.org/jsanch75/group_13_courseproject.git`
+    * Download the project [source](https://github.com/Jalomo1197/Content-Addressable_Network.git) 
+    * or CL `git clone https://github.com/Jalomo1197/Content-Addressable_Network.git`
     * Open/import the project in your IDE:
 
 * Options to run
     * `sbt clean compile run`
     
-* Alternate method: Run the main Scala class `Driver.Simulation`
+* Alternate method: Run the main Scala class `Driver.scala`
 
-# Docker Instance: 
-
-### Prerequisites
+## Docker Instance (coming soon): 
     
 Install [Docker](https://www.docker.com/get-started)
 
@@ -41,27 +40,16 @@ scales. The CAN is scalable, fault-tolerant and completely self-organizing,
 and we demonstrate its scalability, robustness and low-latency properties
 through simulation.
 
-* Chord: A Scalable Peer-to-peer Lookup Service for Internet Applications
 
 * Current version of Akka
 
-The source to the documentation can be found at:
+Documentations:
 
-https://people.eecs.berkeley.edu/~sylvia/papers/cans.pdf
+[CAN Algorithm](https://people.eecs.berkeley.edu/~sylvia/papers/cans.pdf)
 
-http://www.diva-portal.org/smash/get/diva2:836192/FULLTEXT01.pdf
+[CAN Implementation](http://www.diva-portal.org/smash/get/diva2:836192/FULLTEXT01.pdf)
 
-https://pdos.csail.mit.edu/papers/chord:sigcomm01/chord_sigcomm.pdf
-
-https://doc.akka.io/docs/akka/current/
-
-# Visualization with R for Chord
-
-Utilizing the Circilize methodology we map the values from the configuration file into R representing which location each Movie gets assigned to
-the chord. There were 5 different algorithm procedures in R all utilizing the SHA-1 methodology to encrypt the name.
-The results on the image become very pixelated as the size of entries get larger.
-
-![Alt text](Rplot.png?raw=true "Title")
+[Akka Actors](https://doc.akka.io/docs/akka/current/)
 
 
 # Design Architecture and Implementations
@@ -69,11 +57,10 @@ The results on the image become very pixelated as the size of entries get larger
 We are using typed Akka Behaviors model system to interact and manipulate Nodes through actors.
 The distributed data stored can be found in 'aplication.conf' which contains (key,value)->(Movie, "Year,Revenue") pairs.
 
-The movies dataset that was used can be found on [kaggle](https://www.kaggle.com/rounakbanik/the-movies-dataset?select=movies_metadata.csv)
+The movie dataset that was used can be found on [kaggle](https://www.kaggle.com/rounakbanik/the-movies-dataset?select=movies_metadata.csv)
 and was parsed with the parser.py script located under PythonParser that takes the first valid 250+ movies that have a title and budget/year.
 
 Actors that simulate nodes in the simulated cloud have corresponding hash values are generated using unique names that will be assigned to these nodes and they will be inserted based on those hashes
-
 
 
 
